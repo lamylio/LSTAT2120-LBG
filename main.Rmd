@@ -1,0 +1,17 @@
+---
+title: "LSTAT2120 - Linear Project"
+author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
+date: "26/12/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warnings = FALSE)
+knitr::opts_chunk$set(eval = TRUE)
+```
+
+```{r}
+
+```
+
