@@ -11,6 +11,11 @@ knitr::opts_chunk$set(warnings = FALSE)
 knitr::opts_chunk$set(eval = TRUE)
 ```
 
+```{r}
+opt.digits = 3
+```
+
+
 ## Data importation and cleaning
 
 ```{r}
@@ -63,23 +68,38 @@ barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the 
 library(moments)
 library(formattable) # Better print
 
-desc.quantitative = (function(){
+desc.quantitative = (function(data){
   
   addStats = function(col, name){
     
     return(data.frame(
       Variable=name,
-      Mean = mean(col),
-      Std.Deviation = sqrt(var(col)),
-      Skewness = skewness(col),
-      Kurtosis = kurtosis(col)
-    ))
-    
+      Mean = round(mean(col, na.rm = T), opt.digits),
+      Std.Deviation = round(sd(col), opt.digits),
+      Skewness = round(skewness(col), opt.digits),
+      Kurtosis = round(kurtosis(col), opt.digits)
+      ))
   }
   
-  # Todo
+  for (c in colnames(data)[0:-1]){
+    if (exists("results")){
+      results = rbind(results, addStats(data[[c]], c))
+    }else{
+      results = addStats(data[[c]], c)
+    }
+  }
+  return (results)
    
-})()
+})(dataset)
+
+desc.quantitative = desc.quantitative[order(as.character(desc.quantitative$Variable)),]
+row.names(desc.quantitative) = NULL # hide row number
+
+formattable(desc.quantitative,
+            align=c("l", rep("c", ncol(desc.quantitative)-1)),
+            list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, 
+                                                                              ifelse(abs(x) >= 2,"red", "orange"), "black"))))     
+            )
 
 ```
 
