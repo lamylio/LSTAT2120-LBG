@@ -11,7 +11,76 @@ knitr::opts_chunk$set(warnings = FALSE)
 knitr::opts_chunk$set(eval = TRUE)
 ```
 
+## Data importation and cleaning
+
 ```{r}
 
+original = read.csv("./sources/foot_last.csv", sep=";", encoding = "utf8", skipNul = T, stringsAsFactors = F)
+original = na.omit(original)
+
+# Dummies variables
+dummies = data.frame(model.matrix(~ Nationality - 1, data=original), 
+                     model.matrix(~ Preferred_Foot - 1, data=original))
+
+# Transformations
+dataset = within(original, {
+
+  Age = cut(Age, breaks=c(min(Age), round(kmeans(Age, centers = 3, nstart = 10)$centers), max(Age)+1), right=F)
+    
+  Weight  = round(as.numeric(Weight*0.453592))
+  Height = round(sapply(Height, function(x) 
+    as.numeric(strsplit(x, "'")[[1]][1])*12 + as.numeric(strsplit(x, "'")[[1]][2])*2.54))
+  
+  Value = Value_M * 10^6
+  Wage = Wage_K * 1000
+  
+  Value_M = NULL
+  Wage_K = NULL
+  Nationality = NULL
+  Preferred_Foot = NULL
+})
+
+# Splitting into training and validation
+tmp = sample(nrow(dataset), round(.80*nrow(dataset)), replace=F)
+
+train = dataset[tmp,]
+valid = dataset[-tmp,]
+
+rm(tmp)
 ```
+
+## Descriptive analysis
+
+```{r}
+# Histogram of qualitative variable
+
+par(mfrow=c(1,2))
+barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = "#000033", ylab="Percentage")
+barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = "#000033", ylab="Percentage")
+
+
+# Mean, Sd, Skewness, Kurtosis
+library(moments)
+library(formattable) # Better print
+
+desc.quantitative = (function(){
+  
+  addStats = function(col, name){
+    
+    return(data.frame(
+      Variable=name,
+      Mean = mean(col),
+      Std.Deviation = sqrt(var(col)),
+      Skewness = skewness(col),
+      Kurtosis = kurtosis(col)
+    ))
+    
+  }
+  
+  # Todo
+   
+})()
+
+```
+
 
