@@ -11,6 +11,12 @@ knitr::opts_chunk$set(warnings = FALSE)
 knitr::opts_chunk$set(eval = TRUE)
 ```
 
+## Intro and objective
+
+For this project, we will use a dataset that contains all the FIFA 19 player characteristics (FIFA is a football simulation video game, and our dataset come from the 2019's edition). This dataset contains 18059 observations (all the different players created in the game) and 34 variables (characteristics such as Age, Nationality, Wage, Stamina, ...). 
+
+The purpose of our project is to predict the wage of a player based on all his features. This is a very interesting question because it could help club managers to know if some of their players are being underpaid (that would push the player to leave) or overpaid (that could be a threat to club finances). It could also help recruiters to have an idea of the price to pay for a player, depending on the features he is looking for. Finally, it would be a helpful tool for young players, for example to know on which feature they have to work in order to have their wage increased.
+
 ## Data importation and cleaning
 
 ```{r}
