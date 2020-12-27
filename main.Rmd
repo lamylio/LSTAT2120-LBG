@@ -13,6 +13,7 @@ knitr::opts_chunk$set(eval = TRUE)
 
 ```{r}
 opt.digits = 3
+opt.barcolor = "#000033"
 ```
 
 
@@ -60,13 +61,14 @@ rm(tmp)
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
-barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = "#000033", ylab="Percentage")
-barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = "#000033", ylab="Percentage")
+barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage")
+barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
 
 
 # Mean, Sd, Skewness, Kurtosis
 library(moments)
 library(formattable) # Better print
+library(ggplot2)
 
 desc.quantitative = (function(data){
   
@@ -81,7 +83,7 @@ desc.quantitative = (function(data){
       ))
   }
   
-  for (c in colnames(data)[0:-1]){
+  for (c in colnames(data)){
     if (exists("results")){
       results = rbind(results, addStats(data[[c]], c))
     }else{
@@ -90,16 +92,33 @@ desc.quantitative = (function(data){
   }
   return (results)
    
-})(dataset)
+})(dataset[0:-1])
 
 desc.quantitative = desc.quantitative[order(as.character(desc.quantitative$Variable)),]
 row.names(desc.quantitative) = NULL # hide row number
 
 formattable(desc.quantitative,
             align=c("l", rep("c", ncol(desc.quantitative)-1)),
-            list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, 
-                                                                              ifelse(abs(x) >= 2,"red", "orange"), "black"))))     
-            )
+            list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, ifelse(abs(x) >= 2,"red", "orange"), "black")))))
+
+# Boxplot and Histogram
+
+desc.quantitative.boxplots = (function(data){
+  
+  drawBoxplot = function(co, name){
+    par(cex=0.9, mai=c(0.1,0.1,0.2,0.1))
+    
+    par(fig=c(0.1, 1, 0.15, 0.95))
+    # Tried a vertical hist but that's not pretty without ggplot
+    hist(co, axes=T, main=paste0("Distribution de ", name), col = opt.barcolor, xlab="", xaxt="n")
+    
+    par(fig=c(0.1, 1, 0.05, 0.2), new=T)
+    boxplot(co, horizontal = T)
+  }
+  
+  sapply(colnames(data), function (x) drawBoxplot(data[[x]], x))
+  
+})(dataset[0:-1])
 
 ```
 
