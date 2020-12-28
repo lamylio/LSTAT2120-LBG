@@ -3,7 +3,11 @@ title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
 output:
-  html_document: default
+  html_document: 
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+
   pdf_document: default
 ---
 
@@ -39,7 +43,7 @@ addComparison = function(model, model_name){
 }
 ```
 
-## Intro and objective
+# Intro and objective
 
 For this project, we will use a dataset that contains all the FIFA 19 player characteristics (FIFA is a football simulation video game, and our dataset come from the 2019's edition). This dataset contains 18059 observations (all the different players created in the game) and 34 variables (characteristics such as Age, Nationality, Wage, Stamina, ...). 
 
@@ -47,7 +51,7 @@ The purpose of our project is to predict the wage of a player based on all his f
 
 For this purpose we will use linear models only. So for a start we will look more precisely at our dataset and see if the classical assumptions for linear models are respected. We will also check for nonlinearity, influential observations, multicollinearity, heteroskedasticity and autocorrelation. All these concepts will be reexplained in the appropriate section. If some hypotheses seem clearly not satisfied, we will then take remedial actions. We will retain different models based on several regression methods seen in course and will compare them based on robust criterions (for example, their ability to predict correctly th value of the wage for a completely new player).
 
-## Data cleaning and separtion of the dataset
+# Data cleaning and separtion of the dataset
 
 We start by doing a complete case analysis (i.e eliminating all observations that contain missing values). We can do that without intoducing any bias in our analysis, because observations containing missing values constitute an extremely small portion of our dataset (48 of 18207 observations, so less than 0.3%). We than improve the usability of the dataset by changing some units. Initially, the variable Nationality (that recorded the nationality of the player) was encoded as the country of the player, but there were then too much levels and some of them seemed to be irrelevant, so we decided to modify it manually and replace these levels by the associated continents.
 Finally, we separate randomly 20% of our observations. These observations will be used for prediction, but not for model estimation. 
@@ -77,20 +81,14 @@ dataset = within(original, {
   Preferred_Foot = NULL
 })
 
-dataset.age_cut = within(dataset, {
-  Age = cut(Age, breaks=seq(from=min(Age), to=max(Age), by=6), right=F)
-})
+# dataset.age_cut = within(dataset, {
+#   Age = cut(Age, breaks=seq(from=min(Age), to=max(Age), by=6), right=F)
+# })
 
-# Splitting into training and validation
-tmp = sample(nrow(dataset), round(.80*nrow(dataset)), replace=F)
 
-train = cbind(dataset.age_cut[tmp,], dummies[tmp,])
-valid = cbind(dataset.age_cut[-tmp,], dummies[-tmp,])
-
-rm(tmp)
 ```
 
-## Descriptive analysis
+# Descriptive analysis
 
 Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
 
@@ -100,7 +98,7 @@ Among the 34 variables, 27 take values in percentage : it mainly concerns the ga
 par(mfrow=c(1,2))
 barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
-barplot(prop.table(table(dataset.age_cut$Age)), main="Age of the players by interval", col = opt.barcolor)
+#barplot(prop.table(table(dataset.age_cut$Age)), main="Age of the players by interval", col = opt.barcolor)
 
 
 # Mean, Sd, Skewness, Kurtosis
@@ -189,7 +187,7 @@ corrplot(cor(clean_dataset), type="upper", order="hclust", tl.col="black", tl.sr
 Again, this does not mean that we have no multicollinearity at all. We will look at that before model selction in the next section, with more sophisticated tools. 
 
 
-## Model Selection
+# Model Selection
 
 We will now start to select variables to include in our model. We will use the two following types of model selction : a stewise selection using AIC and a LASSO procedure.
 
@@ -200,40 +198,51 @@ library(lmtest)
 library(MASS)
 library(glmnet)
 
+# Splitting into training and validation
+tmp = sample(nrow(clean_dataset), round(.80*nrow(clean_dataset)), replace=F)
+
+train = cbind(clean_dataset[tmp,], dummies[tmp,])
+valid = cbind(clean_dataset[-tmp,], dummies[-tmp,])
+
+rm(tmp)
+
 formula.complete = as.formula("Wage ~ .")
 formula.complete.logy = as.formula("log(Wage) ~ .")
 
 formula.without = as.formula("Wage ~ . - Value")
 
-model.complete = lm(formula.complete, data=clean_dataset)
-model.complete.logy = lm(formula.complete.logy, data=clean_dataset)
+model.complete = lm(formula.complete, data=train)
+model.complete.logy = lm(formula.complete.logy, data=train)
 
-model.without = lm(formula.without, data=clean_dataset)
+model.without = lm(formula.without, data=train)
 
 models.comparison = addComparison(model.complete, "Complete")
 models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 ```
 
-# Stepwise regression
+## Stepwise regression
 
 We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check wheter the AIC keeps decreasing while we include more and more variables. 
 
 
 ```{r model_selection stepwise}
 
-# AIC
-aic.mass = stepAIC(model.complete.logy, direction = "both", trace = F)
-
 # Stepwise AIC
-aic.step = ols_step_both_aic(model.complete.logy, F, F)
+aic.mass = stepAIC(model.complete.logy, direction = "both", trace = F)
+aic.mass
 
-# @Todo 
-# models.comparison = addComparison(xxx, "Stepwise AIC")
+formula.aic = as.formula("log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft")
+
+
+models.comparison = addComparison(lm(formula.aic, data = train), "Stepwise AIC")
 ```
 
+In the stepwise summary above we see that the selection discards 6 variables : Age, Height, Weight, Jumping
 
-
-# LASSO
+## LASSO
 
 The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter \beta.
 Indeed, for a certain coefficient t>0 to be determined, we impose that
@@ -242,27 +251,33 @@ Indeed, for a certain coefficient t>0 to be determined, we impose that
 
 ```{r}
 
-lasso.cv = cv.glmnet(x=data.matrix(within(clean_dataset, {Wage = NULL})), y = log(clean_dataset$Wage), family = "gaussian", alpha = 1)
+lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = log(train$Wage), family = "gaussian", alpha = 1)
 lasso.coef = coef(lasso.cv, s="lambda.min")
 
 formula.lasso = as.formula("log(Wage) ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Interceptions + Composure + Value")
-model.lasso = lm(formula.lasso, data=clean_dataset)
+model.lasso = lm(formula.lasso, data=train)
 
 models.comparison = addComparison(model.lasso, "Lasso")
 ```
 
+## Final Model
+
+```{r}
+models.comparison
+```
 
 
 
-## Underlying Hypotheses Testing
+# Underlying Hypotheses Testing
 
 We will now check for nonlinearity, outliers (and influential observations), multicollinearity, hetroscedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
 
-# Nonlinearity
+## Nonlinearity
 
 We would like to chek wheter it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with j = 1, ..., p-1.  
 
-# Outliers
+
+## Outliers
 
 We will first check for outliers with respect to X. For that, we calculate the levrages that we can find with the following formula 
 \[h_{ii}=(1, X_{i1}, ..., X_{i,p-1})(X'X)^{-1}(1, X_{i1}, ..., X_{i,p-1})'\].
@@ -284,7 +299,6 @@ Because OLS estimators might not longer be the BLUE
 
 
 ```{r assumptions}
-
 ###
 # Nonlinearity
 ###
@@ -307,12 +321,13 @@ ols_test_f(model.complete, rhs=T)
 library(EnvStats)
 boxcox(model.complete, optimize = T)
 
+
 ###
 # Collinearity
 ###
 
 ols_vif_tol(model.complete)
-ols_correlations(model.complete)
+#ols_correlations(model.complete.logy)
 
 
 ###
