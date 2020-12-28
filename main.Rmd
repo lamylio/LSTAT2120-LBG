@@ -3,17 +3,40 @@ title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
 output:
-  html_document: default
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: true
+    toc_depth: 3
+    fig_caption: true
   pdf_document: default
+  rmarkdown::html_document:
+    theme: lumen
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+  html_document: default
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
-knitr::opts_chunk$set(warnings = FALSE)
-knitr::opts_chunk$set(eval = TRUE)
+```{r global.options, include=F}
+knitr::opts_chunk$set(
+  cache = TRUE, 
+  echo = F,
+  eval=T,
+  
+  warnings=F,
+  message=F,
+  
+  out.width= "80%",
+  fig.align = "center",
+  fig.path = "figs/",
+  fig.keep = "all"
+  
+)
+rmarkdown::html_document(df_print = "formattable")
 ```
 
-```{r options}
+```{r}
 opt.digits = 3
 opt.barcolor = "#000033"
 ```
@@ -60,7 +83,7 @@ original = original[-which(original == 0, arr.ind = T)[,1],] # remove rows where
 
 # Dummies variables
 dummies = data.frame(model.matrix(~ Nationality - 1, data=original), 
-                     model.matrix(~ Preferred_Foot - 1, data=original))
+                     Preferred_FootLeft = model.matrix(~ Preferred_Foot - 1, data=original)[,1])
 
 # Transformations
 dataset = within(original, {
@@ -77,30 +100,22 @@ dataset = within(original, {
   Preferred_Foot = NULL
 })
 
-dataset.age_cut = within(dataset, {
-  Age = cut(Age, breaks=seq(from=min(Age), to=max(Age), by=6), right=F)
-})
-
-# Splitting into training and validation
-tmp = sample(nrow(dataset), round(.80*nrow(dataset)), replace=F)
-
-train = cbind(dataset.age_cut[tmp,], dummies[tmp,])
-valid = cbind(dataset.age_cut[-tmp,], dummies[-tmp,])
-
-rm(tmp)
+# dataset.age_cut = within(clean_dataset, {
+#   Age = cut(Age, breaks=seq(from=min(Age), to=max(Age), by=6), right=F)
+# })
 ```
 
 ## Descriptive analysis
 
 Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
 
-```{r descriptive}
+```{r descriptive, fig.width=10}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
 barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
-barplot(prop.table(table(dataset.age_cut$Age)), main="Age of the players by interval", col = opt.barcolor)
+#barplot(prop.table(table(dataset.age_cut$Age)), main="Age of the players by interval", col = opt.barcolor)
 
 
 # Mean, Sd, Skewness, Kurtosis
@@ -200,13 +215,22 @@ library(lmtest)
 library(MASS)
 library(glmnet)
 
+
+# Splitting into training and validation
+tmp = sample(nrow(clean_dataset), round(.80*nrow(clean_dataset)), replace=F)
+
+train = cbind(clean_dataset[tmp,], dummies[tmp,])
+valid = cbind(clean_dataset[-tmp,], dummies[-tmp,])
+
+rm(tmp)
+
 formula.complete = as.formula("Wage ~ .")
 formula.complete.logy = as.formula("log(Wage) ~ .")
 
 formula.without = as.formula("Wage ~ . - Value")
 
-model.complete = lm(formula.complete, data=clean_dataset)
-model.complete.logy = lm(formula.complete.logy, data=clean_dataset)
+model.complete = lm(formula.complete, data=train)
+model.complete.logy = lm(formula.complete.logy, data=train)
 
 model.without = lm(formula.without, data=clean_dataset)
 
@@ -225,7 +249,7 @@ We will use a stepwise function that finds a model that minimizes AIC, using a s
 aic.mass = stepAIC(model.complete.logy, direction = "both", trace = F)
 
 # Stepwise AIC
-aic.step = ols_step_both_aic(model.complete.logy, F, F)
+aic.step = ols_step_both_aic(model.complete.logy, T, F)
 
 # @Todo 
 # models.comparison = addComparison(xxx, "Stepwise AIC")
@@ -277,8 +301,6 @@ Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is a
 
 
 
-
-
 First we need to check for assumptions
 Because OLS estimators might not longer be the BLUE
 
@@ -312,7 +334,7 @@ boxcox(model.complete, optimize = T)
 ###
 
 ols_vif_tol(model.complete)
-ols_correlations(model.complete)
+# ols_correlations(model.complete)
 
 
 ###
