@@ -13,9 +13,30 @@ knitr::opts_chunk$set(warnings = FALSE)
 knitr::opts_chunk$set(eval = TRUE)
 ```
 
-```{r}
+```{r options}
 opt.digits = 3
 opt.barcolor = "#000033"
+```
+
+```{r utils}
+models.comparison = data.frame()
+
+addComparison = function(model, model_name){
+  to_combine = data.frame(
+      LogLik = ifelse(is.null(logLik(model)[1]), yes=NA, no=round(logLik(model)[1], opt.digits)),
+      AIC = round(AIC(model), opt.digits),
+      #BIC = round(BIC(model), opt.digits),
+      R2 = round(summary(model)$r.squared, opt.digits),
+      Adjusted.R2 = round(summary(model)$adj.r.squared, opt.digits),
+      Deviance = ifelse(is.null(deviance(model)), yes=NA, no=round(deviance(model), opt.digits)),
+      #Deviance.custom = cost_deviance(base_train_freq$Frequency, model$fitted),
+      row.names = as.character(model_name)
+  )
+  rbind(
+    models.comparison,
+    to_combine
+  )
+}
 ```
 
 ## Intro and objective
@@ -31,10 +52,11 @@ For this purpose we will use linear models only. So for a start we will look mor
 We start by doing a complete case analysis (i.e eliminating all observations that contain missing values). We can do that without intoducing any bias in our analysis, because observations containing missing values constitute an extremely small portion of our dataset (48 of 18207 observations, so less than 0.3%). We than improve the usability of the dataset by changing some units. Initially, the variable Nationality (that recorded the nationality of the player) was encoded as the country of the player, but there were then too much levels and some of them seemed to be irrelevant, so we decided to modify it manually and replace these levels by the associated continents.
 Finally, we separate randomly 20% of our observations. These observations will be used for prediction, but not for model estimation. 
 
-```{r}
+```{r data_setup}
 set.seed(28122020)
 original = read.csv("./sources/foot_last.csv", sep=";", encoding = "utf8", skipNul = T, stringsAsFactors = F)
 original = na.omit(original)
+original = original[-which(original == 0, arr.ind = T)[,1],]
 
 # Dummies variables
 dummies = data.frame(model.matrix(~ Nationality - 1, data=original), 
@@ -46,8 +68,8 @@ dataset = within(original, {
   Height = round(sapply(Height, function(x) 
     as.numeric(strsplit(x, "'")[[1]][1])*12 + as.numeric(strsplit(x, "'")[[1]][2])*2.54))
   
-  Value = Value_M * 10^6
-  Wage = Wage_K * 1000
+  Value = Value_M #* 10^6
+  Wage = Wage_K #* 1000
   
   Value_M = NULL
   Wage_K = NULL
@@ -72,7 +94,7 @@ rm(tmp)
 
 Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
 
-```{r}
+```{r descriptive}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
@@ -84,7 +106,6 @@ barplot(prop.table(table(dataset.age_cut$Age)), main="Age of the players by inte
 # Mean, Sd, Skewness, Kurtosis
 library(moments)
 library(formattable) # Better print
-library(ggplot2)
 
 desc.quantitative = (function(data){
   
@@ -136,7 +157,6 @@ desc.quantitative.boxplots = (function(data){
   
 ```
 
-
 Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this Table since we have a lot of variables, but we will try to outline the most important ones. 
 
 Let's start with the Age variable. Players age have mean 25, with a 4.7 standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
@@ -149,15 +169,16 @@ Weight and height of the players seem to be normally distributed (maybe a bit ri
 
 The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness and kurtosis near 0. 
 
-```{r}
+```{r full_corrplot}
 library(corrplot)
 corrplot(cor(dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
-```{r}
+```{r min_corrplot}
 #suppression/merge of correlated variables
 
 clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
+
 corrplot(cor(clean_dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
@@ -170,36 +191,83 @@ library(olsrr)
 library(lmtest)
 
 formula.complete = as.formula("Wage ~ .")
-model.complete = lm(formula.complete, data=train)
+formula.complete.logy = as.formula("log(Wage) ~ .")
+
+formula.without = as.formula("Wage ~ . - Value")
+
+model.complete = lm(formula.complete, data=clean_dataset)
+model.complete.logy = lm(formula.complete.logy, data=clean_dataset)
+
+model.without = lm(formula.without, data=clean_dataset)
+
+models.comparison = addComparison(model.complete, "Complete")
+models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 ```
 
 
-```{r}
+```{r assumptions}
+
+###
+# Nonlinearity
+###
+
+# Todo ?
+
 ###
 # Heteroskedasticity
 ###
 
 # Breusch Pagan : assumes that the error terms are normally distributed
-test.breusch = ols_test_breusch_pagan(model.complete, rhs = T, multiple=T) # Rejet de H0
+ols_test_breusch_pagan(model.complete, rhs = T, multiple=T) # Rejet de H0
 bptest(model.complete, studentize = F) # Rejet de H0
+
+ols_test_score(model.complete, rhs=T)
+ols_test_f(model.complete, rhs=T)
+
+# Correction with Boxcox
+
+library(EnvStats)
+boxcox(model.complete, optimize = T)
 
 ###
 # Collinearity
 ###
 
 ols_vif_tol(model.complete)
+ols_correlations(model.complete)
 
 
 ###
 # Residual diagnostics
 ###
 
+library(tseries)
+
+jarque.test(resid(model.complete))
+jarque.bera.test(resid(model.complete))
+
 ols_plot_resid_qq(model.complete)
 ols_plot_resid_fit(model.complete)
 ```
 
+```{r model_selection}
+library(MASS)
+library(glmnet)
+
+aic.mass = stepAIC(model.complete.logy, direction = "both", trace = F)
+
+# Stepwise AIC
+aic.step = ols_step_both_aic(model.complete.logy, F, F)
 
 
+lasso.cv = cv.glmnet(x=data.matrix(within(clean_dataset, {Wage = NULL})), y = log(clean_dataset$Wage), family = "gaussian", alpha = 1)
+lasso.coef = coef(lasso.cv, s="lambda.min")
+
+formula.lasso = as.formula("log(Wage) ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Interceptions + Composure + Value")
+model.lasso = lm(formula.lasso, data=clean_dataset)
+
+models.comparison = addComparison(model.lasso, "Lasso")
+```
 
 
 
