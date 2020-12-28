@@ -256,7 +256,7 @@ models.comparison = addComparison(model.lasso, "Lasso")
 
 ## Underlying Hypotheses Testing
 
-We will now check for nonlinearity, outliers (and influential observations), multicollinearity, hetroscedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
+We will now check for nonlinearity, outliers (and influential observations), multicollinearity, heteroskedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
 
 # Nonlinearity
 
@@ -269,14 +269,33 @@ We will first check for outliers with respect to X. For that, we calculate the l
 In fact, they are the elements on the diagonal of the rojection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
 
 
-
-
 Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is an outlier if 
 \[|d_i^*| > t_{n-p-1; 1-\alpha/2}\], where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\].
 
 
+We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{p/n}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
 
 
+In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. The i-th observation is influential if $\big|DFBETAS_{k,i}\big|>2/\sqrt{n}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$.
+
+# Multicollinearity
+
+We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1.
+
+
+# Heteroskedasticity 
+
+We plot the residuals against the fitted values to consider possible heteroskedasticity. If the variance of the residuals is considerably variable, we discard the hypothesis of homoskedasticity, meaning that there is heteroskedasticity. We can also look at the Breusch-Pagan test to detect heteroskedasticity. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
+
+
+# Autocorrelation
+
+Autocorrelation is discussed through the Breusch-Godfrey test. Recall that this test looks at non-autocorrelation ($H_0$) versus autocorrelation ($H_1$). The null hypothesis can be written as $Corr(\varepsilon_t, \varepsilon_{t-k})=0$ for $k=1,...,p$.
+
+
+# Normality of the residuals
+
+In order to test the normality of the residuals, we can consider a Quantile-Quantile plot of the residuals.
 
 
 First we need to check for assumptions
