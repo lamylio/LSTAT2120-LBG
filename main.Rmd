@@ -42,9 +42,6 @@ dummies = data.frame(model.matrix(~ Nationality - 1, data=original),
 
 # Transformations
 dataset = within(original, {
-
-  Age = kmeans(Age, centers = 5, nstart = 10)$cluster #cut(Age, breaks=c(min(Age), round(kmeans(Age, centers = 3, nstart = 10)$centers), max(Age)+1), right=F)
-    
   Weight  = round(as.numeric(Weight*0.453592))
   Height = round(sapply(Height, function(x) 
     as.numeric(strsplit(x, "'")[[1]][1])*12 + as.numeric(strsplit(x, "'")[[1]][2])*2.54))
@@ -58,11 +55,15 @@ dataset = within(original, {
   Preferred_Foot = NULL
 })
 
+dataset.age_cut = within(dataset, {
+  Age = cut(Age, breaks=seq(from=min(Age), to=max(Age), by=6), right=F)
+})
+
 # Splitting into training and validation
 tmp = sample(nrow(dataset), round(.80*nrow(dataset)), replace=F)
 
-train = cbind(dataset[tmp,], dummies[tmp,])
-valid = cbind(dataset[-tmp,], dummies[-tmp,])
+train = cbind(dataset.age_cut[tmp,], dummies[tmp,])
+valid = cbind(dataset.age_cut[-tmp,], dummies[-tmp,])
 
 rm(tmp)
 ```
@@ -70,12 +71,14 @@ rm(tmp)
 ## Descriptive analysis
 
 Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
+
 ```{r}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
 barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
+barplot(prop.table(table(dataset.age_cut$Age)), main="Age of the players by interval", col = opt.barcolor)
 
 
 # Mean, Sd, Skewness, Kurtosis
@@ -105,9 +108,10 @@ desc.quantitative = (function(data){
   }
   return (results)
    
-})(dataset[0:-1])
+})(dataset)
 
-desc.quantitative = desc.quantitative[order(as.character(desc.quantitative$Variable)),]
+desc.quantitative.order = order(as.character(desc.quantitative$Variable))
+desc.quantitative = desc.quantitative[desc.quantitative.order,]
 row.names(desc.quantitative) = NULL # hide row number
 
 formattable(desc.quantitative,
@@ -120,20 +124,18 @@ desc.quantitative.boxplots = (function(data){
   
   drawBoxplot = function(co, name){
     par(cex=0.9, mai=c(0.1,0.1,0.2,0.1))
-    
     par(fig=c(0.1, 1, 0.15, 0.95))
-    # Tried a vertical hist but that's not pretty without ggplot
-    hist(co, axes=T, main=paste0("Distribution de ", name), col = opt.barcolor, xlab="", xaxt="n")
-    
+    hist(co, axes=T, main=paste0("Distribution of ", name), col = opt.barcolor, xlab="", xaxt="n", ylab="Count")
     par(fig=c(0.1, 1, 0.05, 0.2), new=T)
     boxplot(co, horizontal = T)
   }
   
   sapply(colnames(data), function (x) drawBoxplot(data[[x]], x))
   
-})(dataset[0:-1])
-
+})(dataset)
+  
 ```
+
 
 Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this Table since we have a lot of variables, but we will try to outline the most important ones. 
 
@@ -150,20 +152,17 @@ The remaining variables are all about players abilities. Like we have already sa
 We now look at the correlation matrix. The aim of this step is to detect high pairwise correlations (and therefore multicollinearity). Note that even if there were no pairwise correlations, it would not mean that there is no multicollinearity. In fact, there can be multicollinearity invisible in the correlation matrix because multicollinearity can come frome linear dependance between 3 or more variables.
 ```{r}
 library(corrplot)
-mcor <- cor(dataset)
-corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
-
+corrplot(cor(dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 We have here the upper part of the correlation matrix. We see that all variables in the bottom right have very high pairwise correlations (lots of those correlations are even superior to 0.8). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the overall variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
 
 After this suppression, we see that the following correlation matrix is better, in the sense that we have no longer blocks of high correlated variables. 
+
 ```{r}
 #suppression/merge of correlated variables
-clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
-library(corrplot)
-mcor <- cor(dataset)
-corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 
+clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
+corrplot(cor(clean_dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
 Again, this does not mean that we have no multicollinearity at all. We will look at that before model selction in the next section, with more sophisticated tools. 
@@ -223,35 +222,19 @@ Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is a
 
 
 
-
-
-
+First we need to check for assumptions
+Because OLS estimators might not longer be the BLUE
 
 ```{r}
 library(olsrr)
 library(lmtest)
 
 formula.complete = as.formula("Wage ~ .")
-
-model = lm(formula.complete, data=clean_dataset)
-
- 
-
-# First we need to check for assumptions
-# Because OLS estimators can be no longer the BLUE
-
-# Breusch Pagan 
-# assumes that the error terms are normally distributed
-
-test.breusch = ols_test_breusch_pagan(model, rhs = T, multiple=T) # Rejet de H0
-bptest(model, studentize = F) # Rejet de H0
-
-
-
-
-  
-
+model.complete = lm(formula.complete, data=train)
 ```
+
+
+
 
 
 
