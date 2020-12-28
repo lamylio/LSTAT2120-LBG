@@ -31,6 +31,13 @@ vignettes/*.pdf
 *_cache/
 /cache/
 
+# knitr html files
+*_files/
+/files/
+
+# HTML
+*.html
+
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md

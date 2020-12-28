@@ -309,7 +309,7 @@ plot(x = train[,i], y=model$residuals)
 }
 ```
 
-We see that almost
+We don't see any non-linear patterns in these plots. This can 
 ## Outliers
 
 We will first check for outliers with respect to X. For that, we calculate the levrages that we can find with the following formula 
