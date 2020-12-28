@@ -107,7 +107,7 @@ dataset = within(original, {
 
 ## Descriptive analysis
 
-Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
+Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corresponding barplots. We see that more than half of the players are European, while the 4 other continents don't exceed 25% individually. We also observe that there are four times as many right-footed players than left-footed players.
 
 ```{r descriptive, fig.width=10}
 # Histogram of qualitative variable
@@ -172,26 +172,26 @@ desc.quantitative.boxplots = (function(data){
   
 ```
 
-Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this Table since we have a lot of variables, but we will try to outline the most important ones. 
+Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this table since we have a lot of variables, but we will try to outline the most important ones. 
 
-Let's start with the Age variable. Players age have mean 25, with a 4.7 standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
+Let's start with the \textit{Age} variable. Players age have mean 25, with a 4.7 standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
 
 Now we can look at our variable of interest, the wage. It seems that it is not at all following a normal distribution. In fact, we have a a skewness of 7.8 which means that it is very right-tailed. Furthermore, it has a kurtosis of 103 so the wage variable is extremely thick in the tails. We can back up this claim by looking at the histogram and boxplot of the wage. This variable is definitely not normal.
 
-Similarly from the wage variable, we see that the value of the player is also right-skewed and very thick in its tails. Again, we can look at the histogral/bowplot figure of the value variable and we confirm this tendency.
+Similarly from the \textit{Wage} variable, we see that the value of the player is also right-skewed and very thick in its tails. Again, we can look at the histogram/boxplot figure of the \textit{Value} variable and we confirm this tendency.
 
 Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around 181 cm and 75 kg, respectively.
 
 The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3. 
 
-We now look at the correlation matrix. The aim of this step is to detect high pairwise correlations (and therefore multicollinearity). Note that even if there were no pairwise correlations, it would not mean that there is no multicollinearity. In fact, there can be multicollinearity invisible in the correlation matrix because multicollinearity can come frome linear dependance between 3 or more variables.
+We now look at the correlation matrix. The aim of this step is to detect high pairwise correlations (and therefore multicollinearity). Note that even if there were no pairwise correlations, it would not mean that there is no multicollinearity. In fact, there can be multicollinearity invisible in the correlation matrix because multicollinearity can come from linear dependence between 3 variables or more.
 
 ```{r full_corrplot}
 library(corrplot)
 corrplot(cor(dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
-We have here the upper part of the correlation matrix. We see that all variables in the bottom right have very high pairwise correlations (lots of those correlations are even superior to 0.8). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the overall variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
+We have here the upper part of the correlation matrix. We see that all variables in the bottom right have very high pairwise correlations (lots of those correlations are even superior to 0.8). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the \textit{Overall} variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
 
 After this suppression, we see that the following correlation matrix is better, in the sense that we have no longer blocks of high correlated variables. 
 
@@ -201,12 +201,12 @@ clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
 corrplot(cor(clean_dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
-Again, this does not mean that we have no multicollinearity at all. We will look at that before model selction in the next section, with more sophisticated tools. 
+Again, this does not mean that we have no multicollinearity at all. We will look at that before model selection in the next section, with more sophisticated tools. 
 
 
 ## Model Selection
 
-We will now start to select variables to include in our model. We will use the two following types of model selction : a stewise selection using AIC and a LASSO procedure.
+We will now start to select variables to include in our model. We will use the two following types of model selction : a stepwise selection using AIC and a LASSO procedure.
 
 ```{r}
 library(olsrr)
@@ -240,7 +240,7 @@ models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 
 # Stepwise regression
 
-We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check wheter the AIC keeps decreasing while we include more and more variables. 
+We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check whether the AIC keeps decreasing while we include more and more variables. 
 
 
 ```{r model_selection stepwise}
@@ -259,8 +259,8 @@ aic.step = ols_step_both_aic(model.complete.logy, T, F)
 
 # LASSO
 
-The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter \beta.
-Indeed, for a certain coefficient t>0 to be determined, we impose that
+The LASSO estimator is comparable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter \beta.
+Indeed, for a certain coefficient $t>0$ to be determined, we impose that
 \[ \sum_{j=1}^{p} |\beta_j| \leq t \].
 
 
@@ -280,7 +280,7 @@ models.comparison = addComparison(model.lasso, "Lasso")
 
 ## Underlying Hypotheses Testing
 
-We will now check for nonlinearity, outliers (and influential observations), multicollinearity, hetroscedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
+We will now check for nonlinearity, outliers (and influential observations), multicollinearity, heteroskedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
 
 # Nonlinearity
 
@@ -293,12 +293,34 @@ We will first check for outliers with respect to X. For that, we calculate the l
 In fact, they are the elements on the diagonal of the rojection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
 
 
-
-
 Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is an outlier if 
 \[|d_i^*| > t_{n-p-1; 1-\alpha/2}\], where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\].
 
 
+We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{p/n}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
+
+
+In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. The i-th observation is influential if $\big|DFBETAS_{k,i}\big|>2/\sqrt{n}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$.
+
+# Multicollinearity
+
+We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1.
+
+
+# Heteroskedasticity 
+
+We plot the residuals against the fitted values to consider possible heteroskedasticity. If the variance of the residuals is considerably variable, we discard the hypothesis of homoskedasticity, meaning that there is heteroskedasticity. We can also look at the Breusch-Pagan test to detect heteroskedasticity. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
+
+
+# Autocorrelation
+
+Autocorrelation is discussed through the Breusch-Godfrey test. Recall that this test looks at non-autocorrelation ($H_0$) versus autocorrelation ($H_1$). The null hypothesis can be written as $Corr(\varepsilon_t, \varepsilon_{t-k})=0$ for $k=1,...,p$.
+
+
+# Normality of the residuals
+
+
+In order to test the normality of the residuals, we can consider a Quantile-Quantile plot of the residuals.
 
 
 First we need to check for assumptions
