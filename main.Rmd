@@ -42,9 +42,6 @@ dummies = data.frame(model.matrix(~ Nationality - 1, data=original),
 
 # Transformations
 dataset = within(original, {
-
-  Age = kmeans(Age, centers = 5, nstart = 10)$cluster #cut(Age, breaks=c(min(Age), round(kmeans(Age, centers = 3, nstart = 10)$centers), max(Age)+1), right=F)
-    
   Weight  = round(as.numeric(Weight*0.453592))
   Height = round(sapply(Height, function(x) 
     as.numeric(strsplit(x, "'")[[1]][1])*12 + as.numeric(strsplit(x, "'")[[1]][2])*2.54))
@@ -58,13 +55,15 @@ dataset = within(original, {
   Preferred_Foot = NULL
 })
 
-dataset.age_cut = cut(original$Age, breaks=seq(from=min(original$Age), to=max(original$Age)+1, by=6), right=F)
+dataset.age_cut = within(dataset, {
+  Age = cut(Age, breaks=seq(from=min(Age), to=max(Age), by=6), right=F)
+})
 
 # Splitting into training and validation
 tmp = sample(nrow(dataset), round(.80*nrow(dataset)), replace=F)
 
-train = cbind(dataset[tmp,], dummies[tmp,])
-valid = cbind(dataset[-tmp,], dummies[-tmp,])
+train = cbind(dataset.age_cut[tmp,], dummies[tmp,])
+valid = cbind(dataset.age_cut[-tmp,], dummies[-tmp,])
 
 rm(tmp)
 ```
@@ -79,7 +78,7 @@ Among the 34 variables, 27 take values in percentage : it mainly concerns the ga
 par(mfrow=c(1,2))
 barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
-barplot(prop.table(table(dataset.age_cut)), main="Age of the players by interval", col = opt.barcolor)
+barplot(prop.table(table(dataset.age_cut$Age)), main="Age of the players by interval", col = opt.barcolor)
 
 
 # Mean, Sd, Skewness, Kurtosis
@@ -109,7 +108,7 @@ desc.quantitative = (function(data){
   }
   return (results)
    
-})(cbind(dataset[0:-1], Age=original$Age))
+})(dataset)
 
 desc.quantitative.order = order(as.character(desc.quantitative$Variable))
 desc.quantitative = desc.quantitative[desc.quantitative.order,]
@@ -133,7 +132,7 @@ desc.quantitative.boxplots = (function(data){
   
   sapply(colnames(data), function (x) drawBoxplot(data[[x]], x))
   
-})(cbind(dataset[0:-1], Age=original$Age))
+})(dataset)
   
 ```
 
