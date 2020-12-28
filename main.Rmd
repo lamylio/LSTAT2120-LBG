@@ -24,6 +24,8 @@ For this project, we will use a dataset that contains all the FIFA 19 player cha
 
 The purpose of our project is to predict the wage of a player based on all his features. This is a very interesting question because it could help club managers to know if some of their players are being underpaid (that would push the player to leave) or overpaid (that could be a threat to club finances). It could also help recruiters to have an idea of the price to pay for a player, depending on the features he is looking for. Finally, it would be a helpful tool for young players, for example to know on which feature they have to work in order to have their wage increased.
 
+For this purpose we will use linear models only. So for a start we will look more precisely at our dataset and see if the classical assumptions for linear models are respected. We will also check for nonlinearity, influential observations, multicollinearity, heteroskedasticity and autocorrelation. All these concepts will be reexplained in the appropriate section. If some hypotheses seem clearly not satisfied, we will then take remedial actions. We will retain different models based on several regression methods seen in course and will compare them based on robust criterions (for example, their ability to predict correctly th value of the wage for a completely new player).
+
 ## Data importation and cleaning
 
 ```{r}
