@@ -24,7 +24,10 @@ The purpose of our project is to predict the wage of a player based on all his f
 
 For this purpose we will use linear models only. So for a start we will look more precisely at our dataset and see if the classical assumptions for linear models are respected. We will also check for nonlinearity, influential observations, multicollinearity, heteroskedasticity and autocorrelation. All these concepts will be reexplained in the appropriate section. If some hypotheses seem clearly not satisfied, we will then take remedial actions. We will retain different models based on several regression methods seen in course and will compare them based on robust criterions (for example, their ability to predict correctly th value of the wage for a completely new player).
 
-## Data importation and cleaning
+## Data cleaning and separtion of the dataset
+
+We start by doing a complete case analysis (i.e eliminating all observations that contain missing values). We can do that without intoducing any bias in our analysis, because observations containing missing values constitute an extremely small portion of our dataset (48 of 18207 observations, so less than 0.3%). We than improve the usability of the dataset by changing some units. Initially, the variable Nationality (that recorded the nationality of the player) was encoded as the country of the player, but there were then too much levels and some of them seemed to be irrelevant, so we decided to modify it manually and replace these levels by the associated continents.
+Finally, we separate randomly 20% of our observations. These observations will be used for prediction, but not for model estimation. 
 
 ```{r}
 
@@ -64,11 +67,13 @@ rm(tmp)
 
 ## Descriptive analysis
 
+Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
 ```{r}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
-barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage")
+barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",
+        las = 2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
 
 
@@ -128,5 +133,19 @@ desc.quantitative.boxplots = (function(data){
 })(dataset[0:-1])
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
