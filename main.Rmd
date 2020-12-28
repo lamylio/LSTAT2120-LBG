@@ -3,8 +3,8 @@ title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -145,24 +145,82 @@ Similarly from the wage variable, we see that the value of the player is also ri
 
 Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around 181 cm and 75 kg, respectively.
 
-The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness and kurtosis near 0. 
+The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3. 
 
+We now look at the correlation matrix. The aim of this step is to detect high pairwise correlations (and therefore multicollinearity). Note that even if there were no pairwise correlations, it would not mean that there is no multicollinearity. In fact, there can be multicollinearity invisible in the correlation matrix because multicollinearity can come frome linear dependance between 3 or more variables.
 ```{r}
 library(corrplot)
 mcor <- cor(dataset)
 corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 
 ```
+We have here the upper part of the correlation matrix. We see that all variables in the bottom right have very high pairwise correlations (lots of those correlations are even superior to 0.8). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the overall variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
 
-
+After this suppression, we see that the following correlation matrix is better, in the sense that we have no longer blocks of high correlated variables. 
 ```{r}
 #suppression/merge of correlated variables
-dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
+clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
 library(corrplot)
 mcor <- cor(dataset)
 corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 
 ```
+
+Again, this does not mean that we have no multicollinearity at all. We will look at that before model selction in the next section, with more sophisticated tools. 
+
+
+## Model Selection
+
+We will now start to select variables to include in our model. We will use the two following types of model selction : a stewise selection using AIC and a LASSO proceure.
+
+# Stepwise regression
+
+We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check wheter the AIC keeps decreasing while we include more and more variables. 
+
+
+
+
+
+
+# LASSO
+
+The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter \beta.
+Indeed, for a certain coefficient t>0 to be determined, we impose that
+\[ \sum_{j=1}^{p} |\beta_j| \leq t \].
+
+
+
+
+
+
+## Underlying Hypotheses Testing
+
+We will now check for nonlinearity, outliers (and influential observations), multicollinearity, hetroscedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
+
+# Nonlinearity
+
+We would like to chek wheter it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with j = 1, ..., p-1.  
+
+# Outliers
+
+We will first check for outliers with respect to X. For that, we calculate the levrages that we can find with the following formula 
+\[h_{ii}=(1, X_{i1}, ..., X_{i,p-1})(X'X)^{-1}(1, X_{i1}, ..., X_{i,p-1})'\].
+In fact, they are the elements on the diagonal of the rojection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
+
+
+
+
+Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is an outlier if 
+\[|d_i^*| > t_{n-p-1; 1-\alpha/2}\], where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\].
+
+
+
+
+
+
+
+
+
 
 
 
@@ -175,7 +233,7 @@ library(lmtest)
 
 formula.complete = as.formula("Wage ~ .")
 
-model = lm(formula.complete, data=train)
+model = lm(formula.complete, data=clean_dataset)
 
  
 
@@ -187,6 +245,11 @@ model = lm(formula.complete, data=train)
 
 test.breusch = ols_test_breusch_pagan(model, rhs = T, multiple=T) # Rejet de H0
 bptest(model, studentize = F) # Rejet de H0
+
+
+
+
+  
 
 ```
 
