@@ -189,7 +189,7 @@ Again, this does not mean that we have no multicollinearity at all. We will look
 
 # Model Selection
 
-We will now start to select variables to include in our model. We will use the two following types of model selction : a stewise selection using AIC and a LASSO procedure.
+We will now start to select variables to include in our model. We will use the two following types of model selction : a stepwise selection using AIC and a LASSO procedure. 
 
 ```{r}
 library(olsrr)
@@ -220,29 +220,40 @@ models.comparison = addComparison(model.complete, "Complete")
 models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 ```
 
-## Stepwise regression
+
+
+## Stepwise Regression using AIC
 
 We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check wheter the AIC keeps decreasing while we include more and more variables. 
 
 
 ```{r model_selection stepwise}
-
-# Stepwise AIC
-aic.mass = stepAIC(model.complete.logy, direction = "both", trace = F)
+# Stepwise AIC 
+aic.mass = stepAIC(model.complete, direction = "both", trace = F)
 aic.mass
 
-formula.aic = as.formula("log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+formula.aic = as.formula("Wage ~ Age + Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Strength + Interceptions + Value + NationalityAmerica")
+
+
+models.comparison = addComparison(lm(formula.aic, data = train), "Stepwise AIC")
+
+# Stepwise AIC log(Y)
+aic.masslogy = stepAIC(model.complete.logy, direction = "both", trace = F)
+aic.masslogy
+
+formula.aiclogy = as.formula("log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
     Reactions + Jumping + Strength + Aggression + Composure + 
     Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
     Preferred_FootLeft")
 
 
-models.comparison = addComparison(lm(formula.aic, data = train), "Stepwise AIC")
+models.comparison = addComparison(lm(formula.aiclogy, data = train), "Stepwise AIC log(Y)")
 ```
 
 In the stepwise summary above we see that the selection discards 6 variables : Age, Height, Weight, Jumping
 
-## LASSO
+## LASSO Procedure
 
 The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter \beta.
 Indeed, for a certain coefficient t>0 to be determined, we impose that
@@ -250,23 +261,39 @@ Indeed, for a certain coefficient t>0 to be determined, we impose that
 
 
 ```{r}
-
-lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = log(train$Wage), family = "gaussian", alpha = 1)
+#lasso
+lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = train$Wage, family = "gaussian", alpha = 1)
 lasso.coef = coef(lasso.cv, s="lambda.min")
 
-formula.lasso = as.formula("log(Wage) ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Interceptions + Composure + Value")
+formula.lasso = as.formula("Wage ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Interceptions + Composure + Marking + Value + NationalityAfrica + NationalityAmerica + NationalityEurope + NationalityOceania + Preferred_FootLeft")
 model.lasso = lm(formula.lasso, data=train)
 
 models.comparison = addComparison(model.lasso, "Lasso")
+
+
+
+#lasso log(Y)
+lasso.cvlogy = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = log(train$Wage), family = "gaussian", alpha = 1)
+lasso.coeflogy = coef(lasso.cvlogy, s="lambda.min")
+
+formula.lassology = as.formula("log(Wage) ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Aggression + Composure + Marking + Value + NationalityAfrica + NationalityAmerica +  NationalityAsia + NationalityEurope + NationalityOceania + Preferred_FootLeft + Preferred_FootRight")
+model.lassology = lm(formula.lassology, data=train)
+
+models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 ```
 
 ## Final Model
-
+We have now looked at 6 differents models. The complete regression model, the AIC-stepwise regression model and the lasso regression model. For each of them, we have estimated a model of regression against tha wage variable and against the log_wage variable. We have done that because we suspected non linear relations in our model. 
 ```{r}
 models.comparison
 ```
 
+The table above show a model comparison for those 6 models. We use various criteria such as the loglikelihhod, the AIC, the adjusted R-squared and the deviance. We see that the R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression).
 
+```{r}
+#setting the final model
+model = model.lassology
+```
 
 # Underlying Hypotheses Testing
 
@@ -276,7 +303,13 @@ We will now check for nonlinearity, outliers (and influential observations), mul
 
 We would like to chek wheter it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with j = 1, ..., p-1.  
 
+```{r}
+for(i in 1:13){
+plot(x = train[,i], y=model$residuals)
+}
+```
 
+We see that almost
 ## Outliers
 
 We will first check for outliers with respect to X. For that, we calculate the levrages that we can find with the following formula 
