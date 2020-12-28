@@ -55,6 +55,8 @@ dataset = within(original, {
   Preferred_Foot = NULL
 })
 
+dataset.age_cut = cut(original$Age, breaks=seq(from=min(original$Age), to=max(original$Age)+1, by=6), right=F)
+
 # Splitting into training and validation
 tmp = sample(nrow(dataset), round(.80*nrow(dataset)), replace=F)
 
@@ -72,6 +74,7 @@ rm(tmp)
 par(mfrow=c(1,2))
 barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
+barplot(prop.table(table(dataset.age_cut)), main="Age of the players by interval", col = opt.barcolor)
 
 
 # Mean, Sd, Skewness, Kurtosis
@@ -101,9 +104,10 @@ desc.quantitative = (function(data){
   }
   return (results)
    
-})(dataset[0:-1])
+})(cbind(dataset[0:-1], Age=original$Age))
 
-desc.quantitative = desc.quantitative[order(as.character(desc.quantitative$Variable)),]
+desc.quantitative.order = order(as.character(desc.quantitative$Variable))
+desc.quantitative = desc.quantitative[desc.quantitative.order,]
 row.names(desc.quantitative) = NULL # hide row number
 
 formattable(desc.quantitative,
@@ -116,40 +120,52 @@ desc.quantitative.boxplots = (function(data){
   
   drawBoxplot = function(co, name){
     par(cex=0.9, mai=c(0.1,0.1,0.2,0.1))
-    
     par(fig=c(0.1, 1, 0.15, 0.95))
-    # Tried a vertical hist but that's not pretty without ggplot
-    hist(co, axes=T, main=paste0("Distribution de ", name), col = opt.barcolor, xlab="", xaxt="n")
-    
+    hist(co, axes=T, main=paste0("Distribution of ", name), col = opt.barcolor, xlab="", xaxt="n", ylab="Count")
     par(fig=c(0.1, 1, 0.05, 0.2), new=T)
     boxplot(co, horizontal = T)
   }
   
   sapply(colnames(data), function (x) drawBoxplot(data[[x]], x))
   
-})(dataset[0:-1])
-
+})(cbind(dataset[0:-1], Age=original$Age))
+  
 ```
+
+First we need to check for assumptions
+Because OLS estimators might not longer be the BLUE
 
 ```{r}
 library(olsrr)
 library(lmtest)
 
 formula.complete = as.formula("Wage ~ .")
+model.complete = lm(formula.complete, data=train)
+```
 
-model = lm(formula.complete, data=train)
 
- 
+```{r}
+###
+# Heteroskedasticity
+###
 
-# First we need to check for assumptions
-# Because OLS estimators can be no longer the BLUE
+# Breusch Pagan : assumes that the error terms are normally distributed
+test.breusch = ols_test_breusch_pagan(model.complete, rhs = T, multiple=T) # Rejet de H0
+bptest(model.complete, studentize = F) # Rejet de H0
 
-# Breusch Pagan 
-# assumes that the error terms are normally distributed
+###
+# Collinearity
+###
 
-test.breusch = ols_test_breusch_pagan(model, rhs = T, multiple=T) # Rejet de H0
-bptest(model, studentize = F) # Rejet de H0
+ols_vif_tol(model.complete)
 
+
+###
+# Residual diagnostics
+###
+
+ols_plot_resid_qq(model.complete)
+ols_plot_resid_fit(model.complete)
 ```
 
 
