@@ -2,7 +2,9 @@
 title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -25,7 +27,7 @@ The purpose of our project is to predict the wage of a player based on all his f
 ## Data importation and cleaning
 
 ```{r}
-
+set.seed(28122020)
 original = read.csv("./sources/foot_last.csv", sep=";", encoding = "utf8", skipNul = T, stringsAsFactors = F)
 original = na.omit(original)
 
@@ -36,7 +38,7 @@ dummies = data.frame(model.matrix(~ Nationality - 1, data=original),
 # Transformations
 dataset = within(original, {
 
-  Age = cut(Age, breaks=c(min(Age), round(kmeans(Age, centers = 3, nstart = 10)$centers), max(Age)+1), right=F)
+  Age = kmeans(Age, centers = 5, nstart = 10)$cluster #cut(Age, breaks=c(min(Age), round(kmeans(Age, centers = 3, nstart = 10)$centers), max(Age)+1), right=F)
     
   Weight  = round(as.numeric(Weight*0.453592))
   Height = round(sapply(Height, function(x) 
@@ -54,8 +56,8 @@ dataset = within(original, {
 # Splitting into training and validation
 tmp = sample(nrow(dataset), round(.80*nrow(dataset)), replace=F)
 
-train = dataset[tmp,]
-valid = dataset[-tmp,]
+train = cbind(dataset[tmp,], dummies[tmp,])
+valid = cbind(dataset[-tmp,], dummies[-tmp,])
 
 rm(tmp)
 ```
@@ -66,7 +68,7 @@ rm(tmp)
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
-barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage")
+barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
 
 
@@ -126,5 +128,27 @@ desc.quantitative.boxplots = (function(data){
 })(dataset[0:-1])
 
 ```
+
+```{r}
+library(olsrr)
+library(lmtest)
+
+formula.complete = as.formula("Wage ~ .")
+
+model = lm(formula.complete, data=train)
+
+ 
+
+# First we need to check for assumptions
+# Because OLS estimators can be no longer the BLUE
+
+# Breusch Pagan 
+# assumes that the error terms are normally distributed
+
+test.breusch = ols_test_breusch_pagan(model, rhs = T, multiple=T) # Rejet de H0
+bptest(model, studentize = F) # Rejet de H0
+
+```
+
 
 
