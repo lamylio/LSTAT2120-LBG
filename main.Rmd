@@ -135,6 +135,40 @@ desc.quantitative.boxplots = (function(data){
 
 ```
 
+Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this Table since we have a lot of variables, but we will try to outline the most important ones. 
+
+Let's start with the Age variable. Players age have mean 25, with a 4.7 standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
+
+Now we can look at our variable of interest, the wage. It seems that it is not at all following a normal distribution. In fact, we have a a skewness of 7.8 which means that it is very right-tailed. Furthermore, it has a kurtosis of 103 so the wage variable is extremely thick in the tails. We can back up this claim by looking at the histogram and boxplot of the wage. This variable is definitely not normal.
+
+Similarly from the wage variable, we see that the value of the player is also right-skewed and very thick in its tails. Again, we can look at the histogral/bowplot figure of the value variable and we confirm this tendency.
+
+Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around 181 cm and 75 kg, respectively.
+
+The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness and kurtosis near 0. 
+
+```{r}
+library(corrplot)
+mcor <- cor(dataset)
+corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
+
+```
+
+
+```{r}
+#suppression/merge of correlated variables
+dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
+library(corrplot)
+mcor <- cor(dataset)
+corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
+
+```
+
+
+
+
+
+
 ```{r}
 library(olsrr)
 library(lmtest)
