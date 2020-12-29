@@ -1,0 +1,23 @@
+body {text-align: justify;}
+
+.page-header{ color: inherit; background-color: inherit; background-image: none; }
+
+h1, h2, h3, h4, h5, h6 { color: #0a4d7d !important;}
+table th { background-color: #0a4d7d !important;}
+.project-author, .project-date{ opacity: 1; }
+
+ul {
+  list-style: decimal;
+}
+
+ul ul {
+  list-style: lower-alpha;
+}
+
+thead {
+  display: table-header-group;
+}
+
+tr {
+  page-break-inside: avoid;
+}
