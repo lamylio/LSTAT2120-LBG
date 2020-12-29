@@ -433,7 +433,7 @@ DFFITS = sapply(seq(1, nrow(explanatory)),
   }
 )
 
-influential_fitted = length(which(DFFITS > 2*sqrt((1+ncol(explanatory))/nrow(explanatory))))
+influential_fitted = length(which(abs(DFFITS) > 2*sqrt((1+ncol(explanatory))/nrow(explanatory))))
 
 influential_fitted
 p = ols_plot_dffits(model, print_plot = F)
@@ -611,7 +611,19 @@ We can see above the actual values of the wage variable of the validation datase
 
 
 
-# Conclusions
+# Conclusion
+
+Our main goal was to make football managers know the wage they have to pay their players, in order to be around the average of what other clubs do. That is a useful information because it could be a precious help to the club accounting. We started by selecting the variables that would compose our model. We did that using several methods of selection (AIC-stepwise, LASSO). We also checked if we had better goodness of fit criteria by taking the log of the response variable, and that was the case. We selected a model that was not too complicated but that had still a good fit to the training data. It was the AIC-stepwise model. We were not surprised to see that the value of the player was significative. In fact, the value of the player is one of the variables that help the most to predict his wage. Unsurprinsingly, some game characteritics play a role too. 
+
+We then tested some hypotheses on our selected model. We saw that we have nonlinearities, heteroscedasticity and non normality of the error term. We tried to take remedial actions against that but we think that the non-linear relation in the true model is very complicated, since we did not manage to improve the model with simple analytic transformations of our variables. We saw that we have some outliers and influential observations, but not so much in comparison to the size of the dataset. Of course we did not delete them because this phenomenon might hide the lack of an important explanatory variable, such as player popularity, for example. We tried then some linear hypotheses, but we had to reject all of them.
+
+Finally, and maybe the most important part of the project, the prediction. Unfortunately, we have a severe drawback of our model for this section, our model has very bad predictive power. Our prediction intervals only cover the true value observed in the validation dataset only in 5% of the cases ... 
+
+As a conlusion, we could say that this project was very interesting because it was a dive into a realistic practical problem. 
+Furthermore, the fail to predict correctly our response variables with linear models pushes us to learn more about other regression techniques, and therefore diversify our statistics advanced techniques. 
+
+
+
 
 
 # Appendix
