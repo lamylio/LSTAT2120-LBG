@@ -352,7 +352,6 @@ for(i in 1:15){
   plot(x = train[,i], y=lm(as.formula(paste0("log(Wage) ~ ", colnames(train)[i])), data=train)$residuals, main = colnames(train)[i], ylab = "Residuals", pch=16, col=opt.barcolor)
 }
 
-# y=model$residuals
 ```
 
 We are looking for non-linear patterns on the above plots of the residuals and, if necessary, take remadial actions to cope with that problem. For example, if we see a quadratic scatterplot, we would be tempted to add a quadratic term for this exmplaining variable. In our scatterplots, we don't see evidence of hidden qudratic relations, altough 
@@ -390,19 +389,9 @@ We plot the residuals against the fitted values to consider possible heteroskeda
 
 ```{r}
 #Residuals vs fitted
-t = ols_plot_resid_fit(model, print_plot = F)
-t$layers[[1]]$aes_params$colour = opt.barcolor
-t$layers[[1]]$aes_params$shape = 16
-t$layers[[2]]$aes_params$colour = "black"
-t$theme = theme(
- panel.grid.major = element_blank(), 
- panel.grid.minor = element_blank(), 
- panel.background = element_blank(), 
- axis.line = element_line(colour = "black")
-)
-t
-
-
+plot(model$fitted.values, model$residuals, col=opt.barcolor, 
+     xlab="Fitted values", ylab="Residuals", main="Residuals vs Fitted values")
+abline(h=0)
 ```
 It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
 
@@ -432,26 +421,64 @@ The p-value of this Breush-Godfrey test tells us that we can not reject the null
 In order to test the normality of the residuals, we can first consider a Quantile-Quantile plot of the residuals. In this plot, we compare the empirical quantiles of the residuals with those of a normal distribution. 
 
 ```{r}
-t = ols_plot_resid_qq(model, print_plot = F)
-t$layers[[1]]$aes_params$colour = opt.barcolor
-t$layers[[2]]$aes_params$colour = "black"
-t$theme = theme(
- panel.grid.major = element_blank(), 
- panel.grid.minor = element_blank(), 
- panel.background = element_blank(), 
- axis.line = element_line(colour = "black")
-)
-t
+qqnorm(model$residuals, pch = 1, frame = FALSE, col = opt.barcolor)
+qqline(model$residuals, lwd = 2)
 ```
 
 Therefore, the points on this graph should follow the straight red line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoreticla values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
 \[JB = \frac{n}{6} \Big[\hat{S^2}+\frac{(\hat\kappa-3)^2}{4}\Big] \sim \chi^2_2\], under $H_0$.
 
 ```{r}
-jarque.bera.test(model$residuals)
+
+jarque.test(model$residuals)
 ```
 
-With the result of the tes above, we reject the normality of the error terms. This could be the result of an inadequate model, in fact this could mean that the error is not random. Like we have already said in the non-linearity section, a complicated non-linearity relation could maybe fix this problem, but it would be out of the scope of this project. 
+With the result of the test above, we reject the normality of the error terms. This could be the result of an inadequate model, in fact this could mean that the error is not random. Like we have already said in the non-linearity section, a complicated non-linearity relation could maybe fix this problem, but it would be out of the scope of this project. 
+
+
+
+# Significance of the Coefficients
+We show below the estimates and significance test for the variables that are included in our model. 
+
+
+```{r}
+summary(model)
+```
+
+The variable weight, jumping and PreferredFoot seem to be not significant at level 0.05. This means that for these 3 variables, we can not reject the null hypotheses that the corrisponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from strenght and marking. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. Hwever, marking and strenght abilities seem to lower the salary, and we can not think of an explantion for that phenomenon. We can now take a look more precisely at our qualitative variables (Nationality and PreferredFoot). We see that the fact to be left-footed raise on average your salary by 0.02 thousand of dollars, i.e 20$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the nationality variable, the Asian Nationality 
+improve your salary by 280\$ (on average), the African Nationality by 100\$ and the Europeean Nationality by 120\$. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
+
+
+
+# Coefficient Linear Combination
+
+We will now test if a linear combination of our coeficients holds. We are interested in the effect of the overall variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis : 
+\[H_0 = \beta_{Overall} = \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
+\beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
+
+```{r}
+hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 1, 1, 1, 0, 0, 0, 0, 0)
+linearHypothesis(model, hypothesis.matrix = hyp)
+
+```
+
+We see in the table above that we can reject the restricted model (i.e the model under $H_0$). We can conlude that the effect of the overall variable is not the opposite effect of the mean of the effect of the players abilities. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
