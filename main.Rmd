@@ -389,9 +389,7 @@ We plot the residuals against the fitted values to consider possible heteroskeda
 
 ```{r}
 #Residuals vs fitted
-plot(model$fitted.values, model$residuals, col=opt.barcolor, 
-     xlab="Fitted values", ylab="Residuals", main="Residuals vs Fitted values")
-abline(h=0)
+plot(model$residuals, model$fitted.values)
 ```
 It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
 
@@ -423,6 +421,7 @@ In order to test the normality of the residuals, we can first consider a Quantil
 ```{r}
 qqnorm(model$residuals, pch = 1, frame = FALSE, col = opt.barcolor)
 qqline(model$residuals, lwd = 2)
+
 ```
 
 Therefore, the points on this graph should follow the straight red line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoreticla values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
@@ -453,7 +452,8 @@ improve your salary by 280\$ (on average), the African Nationality by 100\$ and 
 # Coefficient Linear Combination
 
 We will now test if a linear combination of our coeficients holds. We are interested in the effect of the overall variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis : 
-\[H_0 = \beta_{Overall} = \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
+\[H_0 : \beta_{Overall} 
+\\= \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
 \beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
 
 ```{r}
@@ -468,10 +468,21 @@ We see in the table above that we can reject the restricted model (i.e the model
 
 
 
+# Test of nullity of a subset of coefficients
 
+We would like to see if we can simplify our model a bit to a restricted model. For that, we will check if we can say that some of the $\beta_j$ (actually, the ones that we have previously suspected to be non significative) are simultaneously equal to 0.
+Our test staistic is 
+\[\frac{(SSE_0 - SSE)/q}{SSE/(n-p)} \sim F_{q, n-p} \]
+The idea behind this test is that under $H_0$, $SSE$ and $SSE_0$ should be close. We will therefore reject $H_0$ if the statistic is beyond a critical value (for a $F_{q, n-p}$ distribution).
 
+```{r}
+linearHypothesis(model, c("Jumping=0", "Weight=0", "Preferred_FootLeft=0"))
+```
 
+In the result table above, we look at the foolowing null hypothesis :
+\[H_0 : \beta_{Jumping}=\beta_{Weight}=\beta_{PreferredFootLeft}=0\]
 
+We see that we have a p-value of 0.04 for this F-test. That is, we reject the null hypothesis if we choose a confidence level of 0.05, but not if the level is 0.01. Since we have worked with a p-value of 0.05 since the begenning, we can reject $H_0$. So we reject the assertion that $\beta_{Jumping}$, $\beta_{Weight}$ and $\beta_{PreferredFootLeft}$ are null simultaneously.
 
 
 
