@@ -2,13 +2,15 @@
 title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
-output:	output:
-  prettydoc::html_pretty:	  html_document: 
+output:
+  prettydoc::html_pretty:
+    css : "sources/main.css"
     theme: cayman	
     highlight: github	
-    toc: true	
-    toc_depth: 3	
+    toc: true
+    toc_depth: 3
     fig_caption: true	
+    number_sections: no
   pdf_document: default	
   rmarkdown::html_document:
     theme: lumen	
@@ -16,9 +18,14 @@ output:	output:
     toc: yes
     toc_depth: 3
   html_document: default
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    fig_caption: true	
+    number_sections: yes
 ---
 
-```{r global.options, include=F}	```{r setup, include=FALSE}
+```{r global.options, include=F}
 knitr::opts_chunk$set(
   cache = TRUE,
   echo = F,
@@ -38,7 +45,7 @@ rmarkdown::html_document(df_print = "formattable")
 
 ```{r options}
 opt.digits = 3
-opt.barcolor = "#000033"
+opt.barcolor = "#0a4d7d"
 ```
 
 ```{r utils}
@@ -111,7 +118,7 @@ dataset = within(original, {
 
 Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
 
-```{r descriptive}
+```{r descriptive, out.width="100%"}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
@@ -123,6 +130,8 @@ barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the 
 # Mean, Sd, Skewness, Kurtosis
 library(moments)
 library(formattable) # Better print
+library(ggplot2)
+library(gridExtra)
 
 desc.quantitative = (function(data){
   
@@ -153,24 +162,33 @@ desc.quantitative = desc.quantitative[desc.quantitative.order,]
 row.names(desc.quantitative) = NULL # hide row number
 
 formattable(desc.quantitative,
-            align=c("l", rep("c", ncol(desc.quantitative)-1)),
-            list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, ifelse(abs(x) >= 2,"red", "orange"), "black")))))
+            align=c("l", rep("c", ncol(desc.quantitative)-1))
+            #,list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, ifelse(abs(x) >= 2,"red", "orange"), "black"))))
+            )
 
 # Boxplot and Histogram
 
-desc.quantitative.boxplots = (function(data){
+desc.quantitative.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
   
-  drawBoxplot = function(co, name){
-    par(cex=0.9, mai=c(0.1,0.1,0.2,0.1))
-    par(fig=c(0.1, 1, 0.15, 0.95))
-    hist(co, axes=T, main=paste0("Distribution of ", name), col = opt.barcolor, xlab="", xaxt="n", ylab="Count")
-    par(fig=c(0.1, 1, 0.05, 0.2), new=T)
-    boxplot(co, horizontal = T)
+  
+  layout(mat=matrix(seq(nrow*ncol*2), 2*nrow, 1*ncol, byrow=F), heights = rep(c(4,1.5), ncol))
+  drawPlots = function(coname){
+    
+    #histo = ggplot(data) + stat_count(aes(x=coname, y=..count..), position = "identity", fill=opt.barcolor) + ggtitle(paste0("Distribution of ", coname))
+    #boxp = ggplot(data) + geom_boxplot(aes(y=coname), fill=opt.barcolor) + coord_flip() + xlab("")
+    
+    par(mar=c(0, 2, 2, 2))
+    hist(data[[coname]], axes=T, main=coname, col = opt.barcolor, xlab="", ylab="Count", xaxt="n")
+    par(mar=c(2, 2.8, 0, 2.8))
+    boxplot(data[[coname]], horizontal = T, frame=boxframe)
+    
   }
   
-  sapply(colnames(data), function (x) drawBoxplot(data[[x]], x))
+  invisible(sapply(colnames(data), function (x) drawPlots(x)))
   
-})(dataset)
+}
+
+desc.quantitative.boxplots(dataset, 2, 3, T)
   
 ```
 
@@ -274,9 +292,8 @@ In the stepwise summary above we see that the selection discards 6 variables : A
 
 ## LASSO Procedure
 
-The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter \beta.
-Indeed, for a certain coefficient t>0 to be determined, we impose that
-\[ \sum_{j=1}^{p} |\beta_j| \leq t \].
+The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter $\beta$.
+Indeed, for a certain coefficient t>0 to be determined, we impose that \[ \sum_{j=1}^{p} |\beta_j| \leq t \].
 
 
 ```{r}
