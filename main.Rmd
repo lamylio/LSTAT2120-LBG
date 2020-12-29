@@ -379,15 +379,23 @@ In fact, they are the elements on the diagonal of the projection matrix $H=X(X'X
 
 ```{r}
 library("matrixcalc")
+
 explanatory = train[,c("Overall", "Potential", "Weight", "HeadingAccuracy", "Reactions", "Jumping", "Strength", "Aggression", "Composure", "Marking", "Value", "NationalityAfrica", "NationalityAsia", "NationalityEurope", "Preferred_FootLeft")]
-outliers_X=0
-for(i in 1:14326){
-if(as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,]))>32/14326){
-  outliers_X=outliers_X+1
-}
-}
-cat("The number of outliers with respect to X is:")
-outliers_X
+
+pn = (1+ncol(explanatory))*2/nrow(explanatory)
+
+outliers = sum(sapply(seq(1, nrow(explanatory)), 
+    function(i){
+      ma = as.matrix(explanatory[i,])
+      mafull = as.matrix(explanatory)
+      macross = crossprod(mafull, mafull)
+      mainv = matrix.inverse(macross)
+      
+      return((ma %*% tcrossprod(mainv, ma)) > pn)
+  })
+)
+
+outliers
 ```
 Using the criteria described previously, we obtain 387 outliers with respect to X (about 3% of the players). 
 
@@ -395,13 +403,15 @@ Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is a
 \[|d_i^*| > t_{n-p-1; 1-\alpha/2}\], where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\].
 
 ```{r}
-outliers_Y=0
-for(i in 1:14326){
-  if(abs(as.matrix(rstudent(model))[i])>qt(0.975, 14309)){
-    outliers_Y=outliers_Y+1
-    }
-}
-cat("The number of outliers with respect to Y is:")
+
+rStudentModel = abs(as.matrix(rstudent(model)))
+quantileStudent = qt(0.975, nrow(explanatory)-ncol(explanatory)-2)
+
+outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
+  function(i){
+    return(rStudentModel[i] > quantileStudent)
+  }                        
+))
 outliers_Y
 ols_plot_resid_stud_fit(model)
 ```
