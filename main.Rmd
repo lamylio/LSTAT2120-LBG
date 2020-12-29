@@ -4,14 +4,15 @@ author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
 output:
   prettydoc::html_pretty:
-    css : "sources/main.css"
-    theme: cayman	
-    highlight: github	
-    toc: true
+    css: sources/main.css
+    theme: cayman
+    highlight: github
+    toc: yes
     toc_depth: 3
-    fig_caption: true	
+    fig_caption: yes
     number_sections: no
   html_document: default
+  rmarkdown::html_document: default
 ---
 
 ```{r global.options, include=F}
@@ -323,18 +324,31 @@ model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy +
 We will test the interaction between the preferred foot and the marking variable.
 
 ```{r}
-model.interaction = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+model.interaction1 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
     Reactions + Jumping + Strength + Aggression + Composure + 
     Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
     Preferred_FootLeft + Preferred_FootLeft * Marking, data = train)
-
+model.interaction2 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft + Preferred_FootLeft * Value, data = train)
+model.interaction3 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft + NationalityEurope * Potential, data = train)
+model.interaction4 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft + NationalityAfrica * Value, data = train)
 models.comparison = data.frame()
 models.comparison = addComparison(model, "Model")
-models.comparison = addComparison(model.interaction, "Model with interaction")
-
+models.comparison = addComparison(model.interaction1, "Model 1 with interaction")
+models.comparison = addComparison(model.interaction2, "Model 2 with interaction")
+models.comparison = addComparison(model.interaction3, "Model 3 with interaction")
+models.comparison = addComparison(model.interaction4, "Model 4 with interaction")
 ```
 
-In the comparative table above, we see that the interaction we are testing does not improve our criteria of goodness of fit. Adjusted R-squared is the same as for the model without interaction, and the AIC is even slightly greater. Therefore we will working with the model without interaction with the PreferredFoot.
+In the comparative table above, we see that the interactions we are testing does not improve a lot our criteria of goodness of fit : it is possible to get an AIC and an adjusted R-square slightly better than in the basis model (that's the case when we consider the interaction between \textit{NationalityEurope} and \textit{Potential}) but this difference isn't so much considerable. Adjusted R-squared only reaches 0.68 at best instead of 0.679 in the model without interactions and R-squared remains constant for the different tested models. Therefore we will working with the model without any interaction.
 
 # Underlying Hypotheses Testing
 
@@ -359,19 +373,71 @@ the scatterplots for the Overall and Value variables tends to show that there is
 
 ## Outliers
 
-We will first check for outliers with respect to X. For that, we calculate the levrages that we can find with the following formula 
+We will first check for outliers with respect to X. For that, we calculate the leverages that we can find with the following formula 
 \[h_{ii}=(1, X_{i1}, ..., X_{i,p-1})(X'X)^{-1}(1, X_{i1}, ..., X_{i,p-1})'\].
-In fact, they are the elements on the diagonal of the rojection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
+In fact, they are the elements on the diagonal of the projection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
 
+```{r}
+library("matrixcalc")
+explanatory = train[,c("Overall", "Potential", "Weight", "HeadingAccuracy", "Reactions", "Jumping", "Strength", "Aggression", "Composure", "Marking", "Value", "NationalityAfrica", "NationalityAsia", "NationalityEurope", "Preferred_FootLeft")]
+outliers_X=0
+for(i in 1:14326){
+if(as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,]))>32/14326){
+  outliers_X=outliers_X+1
+}
+}
+cat("The number of outliers with respect to X is:")
+outliers_X
+```
+Using the criteria described previously, we obtain 387 outliers with respect to X (about 3% of the players). 
 
 Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is an outlier if 
 \[|d_i^*| > t_{n-p-1; 1-\alpha/2}\], where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\].
 
+```{r}
+outliers_Y=0
+for(i in 1:14326){
+  if(abs(as.matrix(rstudent(model))[i])>qt(0.975, 14309)){
+    outliers_Y=outliers_Y+1
+    }
+}
+cat("The number of outliers with respect to Y is:")
+outliers_Y
+ols_plot_resid_stud_fit(model)
+```
+Again, our decision rule allows us to measure the number of outliers with respect to Y. We have 611 outliers of that kind out of 14326 players, which is quite low again (about 4%). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
 
-We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{p/n}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
+We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{\frac{p}{n}}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
+
+```{r}
+influential_fitted=0
+for(i in 1:14326){
+  if(abs(as.matrix(rstudent(model))[i]*sqrt(as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,]))/(1-as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,])))))>2*sqrt(16/14326)){
+    influential_fitted=influential_fitted+1
+    }
+}
+influential_fitted
+ols_plot_dffits(model)
+```
+We only have 555 influential observations for the fitted values : that's not much again (less than 4% of the players). Since $2\sqrt{\frac{p}{n}} \approx 0.07$ in our case, under our criteria, all the influential observations are represented in red on the previous plot.
 
 
-In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. The i-th observation is influential if $\big|DFBETAS_{k,i}\big|>2/\sqrt{n}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$.
+In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. 
+
+```{r}
+ols_plot_dfbetas(model)
+```
+
+The decision rule seen in class asserts that the i-th observation is influential if $\big|DFBETAS_{k,i}\big|>\frac{2}{\sqrt{n}}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$. In our case, $\frac{2}{\sqrt{n}} \approx 0.02$. Thus, every previous plot corresponds to the coefficient associated with the concerned variable. Then we see that there aren't much influential points for the regression coefficient associated with the \textit{Value} variable whereas the regression coefficient associated with the \textit{Preferred_FootLeft} variable has a lot of influential observations.
+
+To have an overview of all the influential points, we look at the Cooks distance. 
+
+```{r}
+plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance")
+abline(h=4/14326, col="red")
+```
+The Cooks distances are very low (close to 0 for the wide majority). We choose as decision rule that the influential points are the ones for which the Cooks distance $D_i$ is bigger than $\frac{4}{n}$ (threshold represented in red on the previous plot) where $n$ is the number of observations (common criteria). 
+
 
 # Multicollinearity
 
@@ -389,9 +455,7 @@ We plot the residuals against the fitted values to consider possible heteroskeda
 
 ```{r}
 #Residuals vs fitted
-plot(model$fitted.values, model$residuals, col=opt.barcolor, 
-     xlab="Fitted values", ylab="Residuals", main="Residuals vs Fitted values")
-abline(h=0)
+plot(model$residuals, model$fitted.values)
 ```
 It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
 
@@ -412,7 +476,9 @@ bgtest(model)
 
 ```
 
+
 The p-value of this Breush-Godfrey test tells us that we can not reject the null hypothesis of no autocorrelation. Therefore, we don't take remedial actions in this case.
+
 
 
 
@@ -423,6 +489,7 @@ In order to test the normality of the residuals, we can first consider a Quantil
 ```{r}
 qqnorm(model$residuals, pch = 1, frame = FALSE, col = opt.barcolor)
 qqline(model$residuals, lwd = 2)
+
 ```
 
 Therefore, the points on this graph should follow the straight red line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoreticla values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
@@ -453,7 +520,8 @@ improve your salary by 280\$ (on average), the African Nationality by 100\$ and 
 # Coefficient Linear Combination
 
 We will now test if a linear combination of our coeficients holds. We are interested in the effect of the overall variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis : 
-\[H_0 = \beta_{Overall} = \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
+\[H_0 : \beta_{Overall} 
+\\= \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
 \beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
 
 ```{r}
@@ -466,6 +534,24 @@ linearHypothesis(model, hypothesis.matrix = hyp)
 We see in the table above that we can reject the restricted model (i.e the model under $H_0$). We can conlude that the effect of the overall variable is not the opposite effect of the mean of the effect of the players abilities. 
 
 
+# Test of nullity of a subset of coefficients
+
+We would like to see if we can simplify our model a bit to a restricted model. For that, we will check if we can say that some of the $\beta_j$ (actually, the ones that we have previously suspected to be non significative) are simultaneously equal to 0.
+Our test staistic is 
+\[\frac{(SSE_0 - SSE)/q}{SSE/(n-p)} \sim F_{q, n-p} \]
+The idea behind this test is that under $H_0$, $SSE$ and $SSE_0$ should be close. We will therefore reject $H_0$ if the statistic is beyond a critical value (for a $F_{q, n-p}$ distribution).
+
+```{r}
+linearHypothesis(model, c("Jumping=0", "Weight=0", "Preferred_FootLeft=0"))
+```
+
+In the result table above, we look at the foolowing null hypothesis :
+\[H_0 : \beta_{Jumping}=\beta_{Weight}=\beta_{PreferredFootLeft}=0\]
+
+We see that we have a p-value of 0.04 for this F-test. That is, we reject the null hypothesis if we choose a confidence level of 0.05, but not if the level is 0.01. Since we have worked with a p-value of 0.05 since the begenning, we can reject $H_0$. So we reject the assertion that $\beta_{Jumping}$, $\beta_{Weight}$ and $\beta_{PreferredFootLeft}$ are null simultaneously.
+
+
+# Predictions
 
 ```{r}
 predictions = exp(predict(model, newdata = valid, interval = "confidence"))
@@ -478,11 +564,6 @@ points(1:nrow(valid), predictions[,3], col=2, pch=16, cex=0.1)
 aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,3]))
 aimed / nrow(valid)*100
 ```
-
-
-
-
-
 
 
 
