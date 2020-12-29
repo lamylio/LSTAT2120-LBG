@@ -35,6 +35,8 @@ vignettes/*.pdf
 *_files/
 /files/
 
+/figs/
+
 # HTML
 *.html
 

@@ -2,23 +2,19 @@
 title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
-output:	output:
-  prettydoc::html_pretty:	  html_document: 
+output:
+  prettydoc::html_pretty:
+    css : "sources/main.css"
     theme: cayman	
     highlight: github	
-    toc: true	
-    toc_depth: 3	
-    fig_caption: true	
-  pdf_document: default	
-  rmarkdown::html_document:
-    theme: lumen	
-    number_sections: yes
-    toc: yes
+    toc: true
     toc_depth: 3
+    fig_caption: true	
+    number_sections: no
   html_document: default
 ---
 
-```{r global.options, include=F}	```{r setup, include=FALSE}
+```{r global.options, include=F}
 knitr::opts_chunk$set(
   cache = TRUE,
   echo = F,
@@ -38,7 +34,7 @@ rmarkdown::html_document(df_print = "formattable")
 
 ```{r options}
 opt.digits = 3
-opt.barcolor = "#000033"
+opt.barcolor = "#0a4d7d"
 ```
 
 ```{r utils}
@@ -100,29 +96,24 @@ dataset = within(original, {
   Preferred_Foot = NULL
 })
 
-# dataset.age_cut = within(dataset, {
-#   Age = cut(Age, breaks=seq(from=min(Age), to=max(Age), by=6), right=F)
-# })
-
-
 ```
 
 # Descriptive analysis
 
 Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
 
-```{r descriptive}
+```{r descriptive, out.width="80%"}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
 barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
-#barplot(prop.table(table(dataset.age_cut$Age)), main="Age of the players by interval", col = opt.barcolor)
-
 
 # Mean, Sd, Skewness, Kurtosis
 library(moments)
 library(formattable) # Better print
+library(ggplot2)
+library(gridExtra)
 
 desc.quantitative = (function(data){
   
@@ -153,24 +144,34 @@ desc.quantitative = desc.quantitative[desc.quantitative.order,]
 row.names(desc.quantitative) = NULL # hide row number
 
 formattable(desc.quantitative,
-            align=c("l", rep("c", ncol(desc.quantitative)-1)),
-            list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, ifelse(abs(x) >= 2,"red", "orange"), "black")))))
+            align=c("l", rep("c", ncol(desc.quantitative)-1))
+            #,list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, ifelse(abs(x) >= 2,"red", "orange"), "black"))))
+            )
+```
 
+
+```{r descriptive_graph, out.width="100%", fig.height=1.8}
 # Boxplot and Histogram
 
-desc.quantitative.boxplots = (function(data){
+desc.quantitative.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
   
-  drawBoxplot = function(co, name){
-    par(cex=0.9, mai=c(0.1,0.1,0.2,0.1))
-    par(fig=c(0.1, 1, 0.15, 0.95))
-    hist(co, axes=T, main=paste0("Distribution of ", name), col = opt.barcolor, xlab="", xaxt="n", ylab="Count")
-    par(fig=c(0.1, 1, 0.05, 0.2), new=T)
-    boxplot(co, horizontal = T)
+  
+  layout(mat=matrix(seq(nrow*ncol*2), 2*nrow, 1*ncol, byrow=F), heights = rep(c(4,1.5), ncol))
+  drawPlots = function(coname){
+    
+    par(mar=c(0, 2, 2, 2))
+    hist(data[[coname]], axes=T, main=coname, col = opt.barcolor, xlab="", ylab="Count", xaxt="n")
+    par(mar=c(3, 2.3, 0, 2.3))
+    boxplot(data[[coname]], horizontal = T, frame=boxframe)
+    
   }
   
-  sapply(colnames(data), function (x) drawBoxplot(data[[x]], x))
+  invisible(sapply(colnames(data), function (x) drawPlots(x)))
   
-})(dataset)
+}
+
+desc.quantitative.boxplots(data.frame(dataset, Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
+                           1, 4, T)
   
 ```
 
@@ -274,9 +275,8 @@ In the stepwise summary above we see that the selection discards 6 variables : A
 
 ## LASSO Procedure
 
-The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter \beta.
-Indeed, for a certain coefficient t>0 to be determined, we impose that
-\[ \sum_{j=1}^{p} |\beta_j| \leq t \].
+The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter $\beta$.
+Indeed, for a certain coefficient t>0 to be determined, we impose that \[ \sum_{j=1}^{p} |\beta_j| \leq t \].
 
 
 ```{r}
@@ -345,12 +345,18 @@ We will now check for nonlinearity, outliers (and influential observations), mul
 We would like to chek wheter it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with j = 1, ..., p-1.  
 
 ```{r}
-for(i in 1:13){
-plot(x = train[,i], y=model$residuals)
+#train$Value = log(train$Value)
+par(mfrow=c(4,4))
+for(i in 1:15){
+  par(mar=c(2,2,2,1))
+  plot(x = train[,i], y=lm(as.formula(paste0("log(Wage) ~ ", colnames(train)[i])), data=train)$residuals, main = colnames(train)[i], ylab = "Residuals", pch=16, col=opt.barcolor)
 }
+
 ```
 
-We don't see any non-linear patterns in these plots. This can 
+We are looking for non-linear patterns on the above plots of the residuals and, if necessary, take remadial actions to cope with that problem. For example, if we see a quadratic scatterplot, we would be tempted to add a quadratic term for this exmplaining variable. In our scatterplots, we don't see evidence of hidden qudratic relations, altough 
+the scatterplots for the Overall and Value variables tends to show that there is probably a non-linear relation between those terms and our variable of interest. We choose to keep going with the intial model, because the non-linear formula seems to be not straightforward, and therefore we fear to complicate too much the model if we try to deal with it. In addition, recall that we have already taken the log of the wage variable, so we have not so much possibilities remaining.
+
 ## Outliers
 
 We will first check for outliers with respect to X. For that, we calculate the leverages that we can find with the following formula 
@@ -427,72 +433,98 @@ The Cooks distances are very low (close to 0 for the wide majority). We choose a
 
 # Multicollinearity
 
-We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1.
+We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1 (A $VIF_k$ greater than 10 means that the corrisponding $R^2_k$ is larger than 0.9, which is a sign of approximate collinearity). This method, instead of the pairwise correlation matrix that we analysed before, has the advantage to detect also multicollinearity relations involving more than 2 variables.
 
+```{r}
+ols_vif_tol(model)
+```
+
+We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of 2.44. Since it is not extremely far from one, we decide not to do a Ridge Regression, indeed it seems not necessary so far.
 
 # Heteroskedasticity 
 
 We plot the residuals against the fitted values to consider possible heteroskedasticity. If the variance of the residuals is considerably variable, we discard the hypothesis of homoskedasticity, meaning that there is heteroskedasticity. We can also look at the Breusch-Pagan test to detect heteroskedasticity. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
+
+```{r}
+#Residuals vs fitted
+plot(model$fitted.values, model$residuals, col=opt.barcolor, 
+     xlab="Fitted values", ylab="Residuals", main="Residuals vs Fitted values")
+abline(h=0)
+```
+It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
+
+```{r}
+ols_test_breusch_pagan(model, rhs = T, multiple=T)
+
+```
+
+With a p-value of $3.6e^{-174}$, it is perfectly clear that we can reject the null hypothesis of homoscdasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent.
 
 
 # Autocorrelation
 
 Autocorrelation is discussed through the Breusch-Godfrey test. Recall that this test looks at non-autocorrelation ($H_0$) versus autocorrelation ($H_1$). The null hypothesis can be written as $Corr(\varepsilon_t, \varepsilon_{t-k})=0$ for $k=1,...,p$.
 
+```{r}
+bgtest(model)
+
+```
+
+
+The p-value of this Breush-Godfrey test tells us that we can not reject the null hypothesis of no autocorrelation. Therefore, we don't take remedial actions in this case.
+
+
+
 
 # Normality of the residuals
 
-In order to test the normality of the residuals, we can consider a Quantile-Quantile plot of the residuals. 
+In order to test the normality of the residuals, we can first consider a Quantile-Quantile plot of the residuals. In this plot, we compare the empirical quantiles of the residuals with those of a normal distribution. 
 
-
-First we need to check for assumptions
-Because OLS estimators might not longer be the BLUE
-
-
-```{r assumptions}
-###
-# Nonlinearity
-###
-
-# Todo ?
-
-###
-# Heteroskedasticity
-###
-
-# Breusch Pagan : assumes that the error terms are normally distributed
-ols_test_breusch_pagan(model.complete, rhs = T, multiple=T) # Rejet de H0
-bptest(model.complete, studentize = F) # Rejet de H0
-
-ols_test_score(model.complete, rhs=T)
-ols_test_f(model.complete, rhs=T)
-
-# Correction with Boxcox
-
-library(EnvStats)
-boxcox(model.complete, optimize = T)
-
-
-###
-# Collinearity
-###
-
-ols_vif_tol(model.complete)
-#ols_correlations(model.complete.logy)
-
-
-###
-# Residual diagnostics
-###
-
-library(tseries)
-
-jarque.test(resid(model.complete))
-jarque.bera.test(resid(model.complete))
-
-ols_plot_resid_qq(model.complete)
-ols_plot_resid_fit(model.complete)
+```{r}
+qqnorm(model$residuals, pch = 1, frame = FALSE, col = opt.barcolor)
+qqline(model$residuals, lwd = 2)
 ```
+
+Therefore, the points on this graph should follow the straight red line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoreticla values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
+\[JB = \frac{n}{6} \Big[\hat{S^2}+\frac{(\hat\kappa-3)^2}{4}\Big] \sim \chi^2_2\], under $H_0$.
+
+```{r}
+
+jarque.test(model$residuals)
+```
+
+With the result of the test above, we reject the normality of the error terms. This could be the result of an inadequate model, in fact this could mean that the error is not random. Like we have already said in the non-linearity section, a complicated non-linearity relation could maybe fix this problem, but it would be out of the scope of this project. 
+
+
+
+# Significance of the Coefficients
+We show below the estimates and significance test for the variables that are included in our model. 
+
+
+```{r}
+summary(model)
+```
+
+The variable weight, jumping and PreferredFoot seem to be not significant at level 0.05. This means that for these 3 variables, we can not reject the null hypotheses that the corrisponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from strenght and marking. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. Hwever, marking and strenght abilities seem to lower the salary, and we can not think of an explantion for that phenomenon. We can now take a look more precisely at our qualitative variables (Nationality and PreferredFoot). We see that the fact to be left-footed raise on average your salary by 0.02 thousand of dollars, i.e 20$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the nationality variable, the Asian Nationality 
+improve your salary by 280\$ (on average), the African Nationality by 100\$ and the Europeean Nationality by 120\$. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
+
+
+
+# Coefficient Linear Combination
+
+We will now test if a linear combination of our coeficients holds. We are interested in the effect of the overall variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis : 
+\[H_0 = \beta_{Overall} = \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
+\beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
+
+```{r}
+hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 1, 1, 1, 0, 0, 0, 0, 0)
+linearHypothesis(model, hypothesis.matrix = hyp)
+
+```
+
+We see in the table above that we can reject the restricted model (i.e the model under $H_0$). We can conlude that the effect of the overall variable is not the opposite effect of the mean of the effect of the players abilities. 
+
+
 
 
 
