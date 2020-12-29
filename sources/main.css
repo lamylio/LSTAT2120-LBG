@@ -1,23 +1,17 @@
-body {text-align: justify;}
+body {text-align: justify; overflow-x: hidden;}
 
+.project-author, .project-date{ opacity: 1; }
 .page-header{ color: inherit; background-color: inherit; background-image: none; }
 
 h1, h2, h3, h4, h5, h6 { color: #0a4d7d !important;}
 table th { background-color: #0a4d7d !important;}
-.project-author, .project-date{ opacity: 1; }
 
-ul {
-  list-style: decimal;
-}
+pre{ overflow-x: hidden !important;}
 
-ul ul {
-  list-style: lower-alpha;
-}
+/*code{ white-space: pre-wrap !important;}*/
 
-thead {
-  display: table-header-group;
-}
+ul {list-style: decimal; color: #0a4d7d;}
+ul ul {list-style: lower-alpha;}
 
-tr {
-  page-break-inside: avoid;
-}
+thead {display: table-header-group;}
+tr {page-break-inside: avoid;}

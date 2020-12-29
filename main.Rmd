@@ -389,7 +389,9 @@ We plot the residuals against the fitted values to consider possible heteroskeda
 
 ```{r}
 #Residuals vs fitted
-plot(model$residuals, model$fitted.values)
+plot(model$fitted.values, model$residuals, col=opt.barcolor, 
+     xlab="Fitted values", ylab="Residuals", main="Residuals vs Fitted values")
+abline(h=0)
 ```
 It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
 
@@ -421,7 +423,6 @@ In order to test the normality of the residuals, we can first consider a Quantil
 ```{r}
 qqnorm(model$residuals, pch = 1, frame = FALSE, col = opt.barcolor)
 qqline(model$residuals, lwd = 2)
-
 ```
 
 Therefore, the points on this graph should follow the straight red line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoreticla values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
