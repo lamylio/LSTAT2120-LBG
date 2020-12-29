@@ -3,7 +3,6 @@ title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
 output:
-<<<<<<< HEAD
   prettydoc::html_pretty:
     css : "sources/main.css"
     theme: cayman	
@@ -103,7 +102,7 @@ dataset = within(original, {
 
 Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
 
-```{r descriptive, out.width="100%"}
+```{r descriptive, out.width="80%"}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
@@ -148,7 +147,10 @@ formattable(desc.quantitative,
             align=c("l", rep("c", ncol(desc.quantitative)-1))
             #,list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, ifelse(abs(x) >= 2,"red", "orange"), "black"))))
             )
+```
 
+
+```{r descriptive_graph, out.width="100%", fig.height=1.8}
 # Boxplot and Histogram
 
 desc.quantitative.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
@@ -159,7 +161,7 @@ desc.quantitative.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
     
     par(mar=c(0, 2, 2, 2))
     hist(data[[coname]], axes=T, main=coname, col = opt.barcolor, xlab="", ylab="Count", xaxt="n")
-    par(mar=c(2, 2.8, 0, 2.8))
+    par(mar=c(3, 2.3, 0, 2.3))
     boxplot(data[[coname]], horizontal = T, frame=boxframe)
     
   }
@@ -168,7 +170,8 @@ desc.quantitative.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
   
 }
 
-desc.quantitative.boxplots(dataset, 2, 3, T)
+desc.quantitative.boxplots(data.frame(dataset, Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
+                           1, 4, T)
   
 ```
 
@@ -342,9 +345,14 @@ We will now check for nonlinearity, outliers (and influential observations), mul
 We would like to chek wheter it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with j = 1, ..., p-1.  
 
 ```{r}
-for(i in c(2:3,5:10, 12:13, 15)){
-plot(x = train[,i], y=model$residuals, xlab = colnames(train)[i], ylab = "Residuals")
+#train$Value = log(train$Value)
+par(mfrow=c(4,4))
+for(i in 1:15){
+  par(mar=c(2,2,2,1))
+  plot(x = train[,i], y=lm(as.formula(paste0("log(Wage) ~ ", colnames(train)[i])), data=train)$residuals, main = colnames(train)[i], ylab = "Residuals", pch=16, col=opt.barcolor)
 }
+
+# y=model$residuals
 ```
 
 We are looking for non-linear patterns on the above plots of the residuals and, if necessary, take remadial actions to cope with that problem. For example, if we see a quadratic scatterplot, we would be tempted to add a quadratic term for this exmplaining variable. In our scatterplots, we don't see evidence of hidden qudratic relations, altough 
