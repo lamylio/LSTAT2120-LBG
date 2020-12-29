@@ -512,8 +512,8 @@ We show below the estimates and significance test for the variables that are inc
 summary(model)
 ```
 
-The variable weight, jumping and PreferredFoot seem to be not significant at level 0.05. This means that for these 3 variables, we can not reject the null hypotheses that the corrisponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from strenght and marking. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. Hwever, marking and strenght abilities seem to lower the salary, and we can not think of an explantion for that phenomenon. We can now take a look more precisely at our qualitative variables (Nationality and PreferredFoot). We see that the fact to be left-footed raise on average your salary by 0.02 thousand of dollars, i.e 20$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the nationality variable, the Asian Nationality 
-improve your salary by 280\$ (on average), the African Nationality by 100\$ and the Europeean Nationality by 120\$. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
+The variable weight, jumping and PreferredFoot seem to be not significant at level 0.05. This means that for these 3 variables, we can not reject the null hypotheses that the corrisponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from strenght and marking. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. Hwever, marking and strenght abilities seem to lower the salary, and we can not think of an explantion for that phenomenon. We can now take a look more precisely at our qualitative variables (Nationality and PreferredFoot). We see that the fact to be left-footed raise on average your salary by 1000\$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the nationality variable, the Asian Nationality 
+improve your salary by 1300\$ (on average), the African Nationality by 1100\$ and the Europeean Nationality by 1100\$. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
 
 
 
@@ -552,23 +552,31 @@ We see that we have a p-value of 0.04 for this F-test. That is, we reject the nu
 
 
 # Predictions
+We are now interested in calculating confidence intervals for the observations that we left apart in the begining. Thus, now we are not working with our training dataset anymore (80% of the initial data), but with our validation dataset (the 20% left).
+
+We know that a prediction interval at level (1-$\alpha$)100% for a new vector observation $x_h$ is 
+\[\hat{Y}_h \pm t_{n-p;1-\alpha/2}S(1+x_h^{'}(X'X)^{-1}x_h)^{1/2}\]. 
+It is wider than the confidence region for $E[Y_h]$ because for $Y_h$ we also have the incertitude of the error $\epsilon$.
+
 
 ```{r}
 predictions = exp(predict(model, newdata = valid, interval = "confidence"))
 
 plot(1:nrow(valid), valid$Wage, pch=16, cex=0.2, xlab="Obs", ylab="Wage")
+legend("topright", legend = c("Observed Values", "Predicted Values"), fill = c("black", "green"))
 points(1:nrow(valid), predictions[,1], col=3, pch=16, cex=0.1)
-points(1:nrow(valid), predictions[,2], col=2, pch=16, cex=0.1)
-points(1:nrow(valid), predictions[,3], col=2, pch=16, cex=0.1)
+# points(1:nrow(valid), predictions[,2], col=2, pch=16, cex=0.1)
+# points(1:nrow(valid), predictions[,3], col=2, pch=16, cex=0.1)
 
 aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,3]))
 aimed / nrow(valid)*100
 ```
 
+We can see above the actual values of the wage variable of the validation dataset, next to the predicted ones. We see a certain fit with the observed data, which is good. However, we calculate that only 5% of our prediction intervals contains the observed values, which is very poor. 
 
 
 
-
+# Conclusions
 
 
 
