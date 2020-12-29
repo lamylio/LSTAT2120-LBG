@@ -456,6 +456,7 @@ We will now test if a linear combination of our coeficients holds. We are intere
 \beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
 
 ```{r}
+library("car")
 hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 1, 1, 1, 0, 0, 0, 0, 0)
 linearHypothesis(model, hypothesis.matrix = hyp)
 
