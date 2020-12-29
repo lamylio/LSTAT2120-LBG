@@ -2,23 +2,23 @@
 title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
-output:	output:
-  prettydoc::html_pretty:	  html_document: 
-    theme: cayman	
-    highlight: github	
-    toc: true	
-    toc_depth: 3	
-    fig_caption: true	
+output:
+  html_document: default
   pdf_document: default	
   rmarkdown::html_document:
     theme: lumen	
     number_sections: yes
     toc: yes
     toc_depth: 3
-  html_document: default
+  prettydoc::html_pretty: 
+    theme: cayman	
+    highlight: github	
+    toc: true	
+    toc_depth: 3	
+    fig_caption: true	
 ---
 
-```{r global.options, include=F}	```{r setup, include=FALSE}
+```{r global.options, include=F}
 knitr::opts_chunk$set(
   cache = TRUE,
   echo = F,
@@ -345,12 +345,14 @@ We will now check for nonlinearity, outliers (and influential observations), mul
 We would like to chek wheter it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with j = 1, ..., p-1.  
 
 ```{r}
-for(i in 1:13){
-plot(x = train[,i], y=model$residuals)
+for(i in c(2:3,5:10, 12:13, 15)){
+plot(x = train[,i], y=model$residuals, xlab = colnames(train)[i], ylab = "Residuals")
 }
 ```
 
-We don't see any non-linear patterns in these plots. This can 
+We are looking for non-linear patterns on the above plots of the residuals and, if necessary, take remadial actions to cope with that problem. For example, if we see a quadratic scatterplot, we would be tempted to add a quadratic term for this exmplaining variable. In our scatterplots, we don't see evidence of hidden qudratic relations, altough 
+the scatterplots for the Overall and Value variables tends to show that there is probably a non-linear relation between those terms and our variable of interest. We choose to keep going with the intial model, because the non-linear formula seems to be not straightforward, and therefore we fear to complicate too much the model if we try to deal with it. In addition, recall that we have already taken the log of the wage variable, so we have not so much possibilities remaining.
+
 ## Outliers
 
 We will first check for outliers with respect to X. For that, we calculate the levrages that we can find with the following formula 
@@ -369,86 +371,62 @@ In addition to that kind of influential observations, we have to consider the in
 
 # Multicollinearity
 
-We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1.
+We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1 (A $VIF_k$ greater than 10 means that the corrisponding $R^2_k$ is larger than 0.9, which is a sign of approximate collinearity). This method, instead of the pairwise correlation matrix that we analysed before, has the advantage to detect also multicollinearity relations involving more than 2 variables.
 
+```{r}
+ols_vif_tol(model)
+```
+
+We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of 2.44. Since it is not extremely far from one, we decide not to do a Ridge Regression, indeed it seems not necessary so far.
 
 # Heteroskedasticity 
 
 We plot the residuals against the fitted values to consider possible heteroskedasticity. If the variance of the residuals is considerably variable, we discard the hypothesis of homoskedasticity, meaning that there is heteroskedasticity. We can also look at the Breusch-Pagan test to detect heteroskedasticity. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
+
+```{r}
+#Residuals vs fitted
+ols_plot_resid_fit(model)
+```
+It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
+
+```{r}
+ols_test_breusch_pagan(model, rhs = T, multiple=T)
+
+```
+
+With a p-value of $3.6e^{-174}$, it is perfectly clear that we can reject the null hypothesis of homoscdasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent.
 
 
 # Autocorrelation
 
 Autocorrelation is discussed through the Breusch-Godfrey test. Recall that this test looks at non-autocorrelation ($H_0$) versus autocorrelation ($H_1$). The null hypothesis can be written as $Corr(\varepsilon_t, \varepsilon_{t-k})=0$ for $k=1,...,p$.
 
+```{r}
+bgtest(model)
+
+```
+
+The p-value of this Breush-Godfrey test tells us that we can not reject the null hypothesis of no autocorrelation. Therefore, we don't take remedial actions in this case.
+
+
 
 # Normality of the residuals
 
-In order to test the normality of the residuals, we can consider a Quantile-Quantile plot of the residuals.
+In order to test the normality of the residuals, we can first consider a Quantile-Quantile plot of the residuals. In this plot, we compare the empirical quantiles of the residuals with those of a normal distribution. 
 
+```{r}
+ols_plot_resid_qq(model)
 
-First we need to check for assumptions
-Because OLS estimators might not longer be the BLUE
-
-
-```{r assumptions}
-###
-# Nonlinearity
-###
-
-# Todo ?
-
-###
-# Heteroskedasticity
-###
-
-# Breusch Pagan : assumes that the error terms are normally distributed
-ols_test_breusch_pagan(model.complete, rhs = T, multiple=T) # Rejet de H0
-bptest(model.complete, studentize = F) # Rejet de H0
-
-ols_test_score(model.complete, rhs=T)
-ols_test_f(model.complete, rhs=T)
-
-# Correction with Boxcox
-
-library(EnvStats)
-boxcox(model.complete, optimize = T)
-
-
-###
-# Collinearity
-###
-
-ols_vif_tol(model.complete)
-#ols_correlations(model.complete.logy)
-
-
-###
-# Residual diagnostics
-###
-
-library(tseries)
-
-jarque.test(resid(model.complete))
-jarque.bera.test(resid(model.complete))
-
-ols_plot_resid_qq(model.complete)
-ols_plot_resid_fit(model.complete)
 ```
 
+Therefore, the points on this graph should follow the straight red line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoreticla values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
+\[JB = \frac{n}{6} \Big[\hat{S^2}+\frac{(\hat\kappa-3)^2}{4}\Big] \sim \chi^2_2\], under $H_0$.
 
+```{r}
+jarque.bera.test(model$residuals)
+```
 
-
-
-
-
-
-
-
-
-
-
-
+With the result of the tes above, we reject the normality of the error terms. This could be the result of an inadequate model, in fact this could mean that the error is not random. Like we have already said in the non-linearity section, a complicated non-linearity relation could maybe fix this problem, but it would be out of the scope of this project. 
 
 
 
