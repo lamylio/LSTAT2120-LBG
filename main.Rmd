@@ -282,7 +282,7 @@ model.lassology = lm(formula.lassology, data=train)
 models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 ```
 
-## Final Model
+## Final Model (without interactions)
 We have now looked at 6 differents models. The complete regression model, the AIC-stepwise regression model and the lasso regression model. For each of them, we have estimated a model of regression against tha wage variable and against the log_wage variable. We have done that because we suspected non linear relations in our model. 
 ```{r}
 models.comparison
@@ -291,9 +291,31 @@ models.comparison
 The table above show a model comparison for those 6 models. We use various criteria such as the loglikelihhod, the AIC, the adjusted R-squared and the deviance. We see that the R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression).
 
 ```{r}
-#setting the final model
-model = model.lassology
+#setting the final model (aic logy)
+model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft, data = train)
+
 ```
+
+## Interactions
+
+We will test the interaction between the preferred foot and the marking variable.
+
+```{r}
+model.interaction = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft + Preferred_FootLeft * Marking, data = train)
+
+models.comparison = data.frame()
+models.comparison = addComparison(model, "Model")
+models.comparison = addComparison(model.interaction, "Model with interaction")
+
+```
+
+In the comparative table above, we see that the interaction we are testing does not improve our criteria of goodness of fit. Adjusted R-squared is the same as for the model without interaction, and the AIC is even slightly greater. Therefore we will working with the model without interaction with the PreferredFoot.
 
 # Underlying Hypotheses Testing
 
