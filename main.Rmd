@@ -353,19 +353,77 @@ plot(x = train[,i], y=model$residuals)
 We don't see any non-linear patterns in these plots. This can 
 ## Outliers
 
-We will first check for outliers with respect to X. For that, we calculate the levrages that we can find with the following formula 
+We will first check for outliers with respect to X. For that, we calculate the leverages that we can find with the following formula 
 \[h_{ii}=(1, X_{i1}, ..., X_{i,p-1})(X'X)^{-1}(1, X_{i1}, ..., X_{i,p-1})'\].
-In fact, they are the elements on the diagonal of the rojection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
+In fact, they are the elements on the diagonal of the projection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
 
+```{r}
+library("matrixcalc")
+explanatory = train[,c("Overall", "Potential", "Weight", "HeadingAccuracy", "Reactions", "Jumping", "Strength", "Aggression", "Composure", "Marking", "Value", "NationalityAfrica", "NationalityAsia", "NationalityEurope", "Preferred_FootLeft")]
+outliers_X=0
+for(i in 1:14326){
+if(as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,]))>32/14326){
+  outliers_X=outliers_X+1
+}
+}
+cat("The number of outliers with respect to X is:")
+outliers_X
+```
+Using the criteria described previously, we obtain 387 outliers with respect to X (about 3% of the players). 
 
 Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is an outlier if 
 \[|d_i^*| > t_{n-p-1; 1-\alpha/2}\], where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\].
 
+```{r}
+outliers_Y=0
+for(i in 1:14326){
+  if(abs(as.matrix(rstudent(model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft, data = train)))[i])>qt(0.975, 14309)){
+    outliers_Y=outliers_Y+1
+    }
+}
+cat("The number of outliers with respect to Y is:")
+outliers_Y
+ols_plot_resid_stud_fit(model)
+```
+Again, our decision rule allows us to measure the number of outliers with respect to Y. We have 611 outliers of that kind out of 14326 players, which is quite low again (about 4%). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
 
-We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{p/n}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
+We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{\frac{p}{n}}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
+
+```{r}
+influential_fitted=0
+for(i in 1:14326){
+  if(abs(as.matrix(rstudent(model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft, data = train)))[i]*sqrt(as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,]))/(1-as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,])))))>2*sqrt(16/14326)){
+    influential_fitted=influential_fitted+1
+    }
+}
+influential_fitted
+ols_plot_dffits(model)
+```
+We only have 555 influential observations for the fitted values : that's not much again (less than 4% of the players). Since $2\sqrt{\frac{p}{n}} \approx 0.07$ in our case, under our criteria, all the influential observations are represented in red on the previous plot.
 
 
-In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. The i-th observation is influential if $\big|DFBETAS_{k,i}\big|>2/\sqrt{n}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$.
+In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. 
+
+```{r}
+ols_plot_dfbetas(model)
+```
+
+The decision rule seen in class asserts that the i-th observation is influential if $\big|DFBETAS_{k,i}\big|>\frac{2}{\sqrt{n}}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$. In our case, $\frac{2}{\sqrt{n}} \approx 0.02$. Thus, every previous plot corresponds to the coefficient associated with the concerned variable. Then we see that there aren't much influential points for the regression coefficient associated with the \textit{Value} variable whereas the regression coefficient associated with the \textit{Preferred_FootLeft} variable has a lot of influential observations.
+
+To have an overview of all the influential points, we look at the Cooks distance. 
+
+```{r}
+plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance")
+abline(h=4/14326, col="red")
+```
+The Cooks distances are very low (close to 0 for the wide majority). We choose as decision rule that the influential points are the ones for which the Cooks distance $D_i$ is bigger than $\frac{4}{n}$ (threshold represented in red on the previous plot) where $n$ is the number of observations (common criteria). 
+
 
 # Multicollinearity
 
@@ -384,7 +442,7 @@ Autocorrelation is discussed through the Breusch-Godfrey test. Recall that this 
 
 # Normality of the residuals
 
-In order to test the normality of the residuals, we can consider a Quantile-Quantile plot of the residuals.
+In order to test the normality of the residuals, we can consider a Quantile-Quantile plot of the residuals. 
 
 
 First we need to check for assumptions
