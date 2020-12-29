@@ -430,3 +430,38 @@ With the result of the tes above, we reject the normality of the error terms. Th
 
 
 
+# Significance of the Coefficients
+We show below the estimates and significance test for the variables that are included in our model. 
+
+
+```{r}
+summary(model)
+```
+
+The variable weight, jumping and PreferredFoot seem to be not significant at level 0.05. This means that for these 3 variables, we can not reject the null hypotheses that the corrisponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from strenght and marking. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. Hwever, marking and strenght abilities seem to lower the salary, and we can not think of an explantion for that phenomenon. We can now take a look more precisely at our qualitative variables (Nationality and PreferredFoot). We see that the fact to be left-footed raise on average your salary by 0.02 thousand of dollars, i.e 20$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the nationality variable, the Asian Nationality 
+improve your salary by 280\$ (on average), the African Nationality by 100\$ and the Europeean Nationality by 120\$. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
+
+
+
+# Coefficient Linear Combination
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
