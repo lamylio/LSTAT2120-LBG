@@ -390,7 +390,19 @@ We plot the residuals against the fitted values to consider possible heteroskeda
 
 ```{r}
 #Residuals vs fitted
-ols_plot_resid_fit(model)
+t = ols_plot_resid_fit(model, print_plot = F)
+t$layers[[1]]$aes_params$colour = opt.barcolor
+t$layers[[1]]$aes_params$shape = 16
+t$layers[[2]]$aes_params$colour = "black"
+t$theme = theme(
+ panel.grid.major = element_blank(), 
+ panel.grid.minor = element_blank(), 
+ panel.background = element_blank(), 
+ axis.line = element_line(colour = "black")
+)
+t
+
+
 ```
 It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
 
@@ -420,8 +432,16 @@ The p-value of this Breush-Godfrey test tells us that we can not reject the null
 In order to test the normality of the residuals, we can first consider a Quantile-Quantile plot of the residuals. In this plot, we compare the empirical quantiles of the residuals with those of a normal distribution. 
 
 ```{r}
-ols_plot_resid_qq(model)
-
+t = ols_plot_resid_qq(model, print_plot = F)
+t$layers[[1]]$aes_params$colour = opt.barcolor
+t$layers[[2]]$aes_params$colour = "black"
+t$theme = theme(
+ panel.grid.major = element_blank(), 
+ panel.grid.minor = element_blank(), 
+ panel.background = element_blank(), 
+ axis.line = element_line(colour = "black")
+)
+t
 ```
 
 Therefore, the points on this graph should follow the straight red line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoreticla values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
