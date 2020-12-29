@@ -384,18 +384,18 @@ explanatory = train[,c("Overall", "Potential", "Weight", "HeadingAccuracy", "Rea
 
 pn = (1+ncol(explanatory))*2/nrow(explanatory)
 
-outliers = sum(sapply(seq(1, nrow(explanatory)), 
-    function(i){
-      ma = as.matrix(explanatory[i,])
-      mafull = as.matrix(explanatory)
-      macross = crossprod(mafull, mafull)
-      mainv = matrix.inverse(macross)
-      
-      return((ma %*% tcrossprod(mainv, ma)) > pn)
-  })
+mafull = as.matrix(explanatory)
+macross = crossprod(mafull, mafull)
+mainv = matrix.inverse(macross)
+
+hii = sapply(seq(1, nrow(explanatory)), 
+  function(i){
+    ma = as.matrix(explanatory[i,])
+    return(ma %*% tcrossprod(mainv, ma))
+  }
 )
 
-outliers
+outliers_X = length(which(hii > pn))
 ```
 Using the criteria described previously, we obtain 387 outliers with respect to X (about 3% of the players). 
 
@@ -404,12 +404,12 @@ Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is a
 
 ```{r}
 
-rStudentModel = abs(as.matrix(rstudent(model)))
+rStudentModel = as.matrix(rstudent(model))
 quantileStudent = qt(0.975, nrow(explanatory)-ncol(explanatory)-2)
 
 outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
   function(i){
-    return(rStudentModel[i] > quantileStudent)
+    return(abs(rStudentModel[i]) > quantileStudent)
   }                        
 ))
 outliers_Y
@@ -420,12 +420,15 @@ Again, our decision rule allows us to measure the number of outliers with respec
 We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{\frac{p}{n}}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
 
 ```{r}
-influential_fitted=0
-for(i in 1:14326){
-  if(abs(as.matrix(rstudent(model))[i]*sqrt(as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,]))/(1-as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,])))))>2*sqrt(16/14326)){
-    influential_fitted=influential_fitted+1
-    }
-}
+
+DFFITS = sapply(seq(1, nrow(explanatory)), 
+  function(i){
+    return(rStudentModel[i] * sqrt(hii[i]/(1-hii[i])))
+  }
+)
+
+influential_fitted = length(which(DFFITS > 2*sqrt((1+ncol(explanatory))/nrow(explanatory))))
+
 influential_fitted
 ols_plot_dffits(model)
 ```
