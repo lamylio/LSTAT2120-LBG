@@ -3,7 +3,6 @@ title: "LSTAT2120 - Linear Project"
 author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
 output:
-<<<<<<< HEAD
   prettydoc::html_pretty:
     css : "sources/main.css"
     theme: cayman	
@@ -345,6 +344,9 @@ We would like to chek wheter it was a good choice to make a linear model regress
 for(i in c(2:3,5:10, 12:13, 15)){
 plot(x = train[,i], y=model$residuals, xlab = colnames(train)[i], ylab = "Residuals")
 }
+
+
+
 ```
 
 We are looking for non-linear patterns on the above plots of the residuals and, if necessary, take remadial actions to cope with that problem. For example, if we see a quadratic scatterplot, we would be tempted to add a quadratic term for this exmplaining variable. In our scatterplots, we don't see evidence of hidden qudratic relations, altough 
@@ -382,7 +384,7 @@ We plot the residuals against the fitted values to consider possible heteroskeda
 
 ```{r}
 #Residuals vs fitted
-ols_plot_resid_fit(model)
+plot(model$residuals, model$fitted.values)
 ```
 It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
 
@@ -412,7 +414,8 @@ The p-value of this Breush-Godfrey test tells us that we can not reject the null
 In order to test the normality of the residuals, we can first consider a Quantile-Quantile plot of the residuals. In this plot, we compare the empirical quantiles of the residuals with those of a normal distribution. 
 
 ```{r}
-ols_plot_resid_qq(model)
+qqnorm(model$residuals, pch = 1, frame = FALSE, col = opt.barcolor)
+qqline(model$residuals, lwd = 2)
 
 ```
 
@@ -420,10 +423,11 @@ Therefore, the points on this graph should follow the straight red line. We see 
 \[JB = \frac{n}{6} \Big[\hat{S^2}+\frac{(\hat\kappa-3)^2}{4}\Big] \sim \chi^2_2\], under $H_0$.
 
 ```{r}
-jarque.bera.test(model$residuals)
+
+jarque.test(model$residuals)
 ```
 
-With the result of the tes above, we reject the normality of the error terms. This could be the result of an inadequate model, in fact this could mean that the error is not random. Like we have already said in the non-linearity section, a complicated non-linearity relation could maybe fix this problem, but it would be out of the scope of this project. 
+With the result of the test above, we reject the normality of the error terms. This could be the result of an inadequate model, in fact this could mean that the error is not random. Like we have already said in the non-linearity section, a complicated non-linearity relation could maybe fix this problem, but it would be out of the scope of this project. 
 
 
 
@@ -442,7 +446,17 @@ improve your salary by 280\$ (on average), the African Nationality by 100\$ and 
 
 # Coefficient Linear Combination
 
+We will now test if a linear combination of our coeficients holds. We are interested in the effect of the overall variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis : 
+\[H_0 = \beta_{Overall} = \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
+\beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
 
+```{r}
+hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 1, 1, 1, 0, 0, 0, 0, 0)
+linearHypothesis(model, hypothesis.matrix = hyp)
+
+```
+
+We see in the table above that we can reject the restricted model (i.e the model under $H_0$). We can conlude that the effect of the overall variable is not the opposite effect of the mean of the effect of the players abilities. 
 
 
 
