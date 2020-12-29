@@ -457,6 +457,7 @@ We will now test if a linear combination of our coeficients holds. We are intere
 \beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
 
 ```{r}
+library(car)
 hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 1, 1, 1, 0, 0, 0, 0, 0)
 linearHypothesis(model, hypothesis.matrix = hyp)
 
@@ -466,6 +467,17 @@ We see in the table above that we can reject the restricted model (i.e the model
 
 
 
+```{r}
+predictions = exp(predict(model, newdata = valid, interval = "confidence"))
+
+plot(1:nrow(valid), valid$Wage, pch=16, cex=0.2, xlab="Obs", ylab="Wage")
+points(1:nrow(valid), predictions[,1], col=3, pch=16, cex=0.1)
+points(1:nrow(valid), predictions[,2], col=2, pch=16, cex=0.1)
+points(1:nrow(valid), predictions[,3], col=2, pch=16, cex=0.1)
+
+aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,3]))
+aimed / nrow(valid)*100
+```
 
 
 
