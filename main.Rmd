@@ -1,7 +1,7 @@
 ---
 title: "LSTAT2120 - Linear Project"
-author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
-date: "26/12/2020"
+author: "Bartolomeo Aurèle, Gengler Rémi, Lamy Lionel"
+date: "January 2021"
 output:
   prettydoc::html_pretty:
     css: sources/main.css
@@ -21,13 +21,13 @@ knitr::opts_chunk$set(
   echo = F,
   eval=T,	
   	
-  warnings=F,	
-  message=F,	
+  warning=F,	
+  message=F,
+  
   	
   out.width= "80%",	
   fig.align = "center",	
-  fig.path = "figs/",	
-  fig.keep = "all"	
+  fig.path = "figs/"
   	
 )	
 rmarkdown::html_document(df_print = "formattable")
@@ -43,14 +43,15 @@ models.comparison = data.frame()
 
 addComparison = function(model, model_name){
   to_combine = data.frame(
+      Variable = as.character(model_name),
       LogLik = ifelse(is.null(logLik(model)[1]), yes=NA, no=round(logLik(model)[1], opt.digits)),
       AIC = round(AIC(model), opt.digits),
       #BIC = round(BIC(model), opt.digits),
       R2 = round(summary(model)$r.squared, opt.digits),
       Adjusted.R2 = round(summary(model)$adj.r.squared, opt.digits),
-      Deviance = ifelse(is.null(deviance(model)), yes=NA, no=round(deviance(model), opt.digits)),
+      Deviance = ifelse(is.null(deviance(model)), yes=NA, no=round(deviance(model), opt.digits))
       #Deviance.custom = cost_deviance(base_train_freq$Frequency, model$fitted),
-      row.names = as.character(model_name)
+      #row.names = as.character(model_name)
   )
   rbind(
     models.comparison,
@@ -59,7 +60,7 @@ addComparison = function(model, model_name){
 }
 ```
 
-# Intro and objective
+# Introduction and objective
 
 For this project, we will use a dataset that contains all the FIFA 19 player characteristics (FIFA is a football simulation video game, and our dataset come from the 2019's edition). This dataset contains 18059 observations (all the different players created in the game) and 34 variables (characteristics such as Age, Nationality, Wage, Stamina, ...). 
 
@@ -101,7 +102,7 @@ dataset = within(original, {
 
 # Descriptive analysis
 
-Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
+Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot.
 
 ```{r descriptive, out.width="80%"}
 # Histogram of qualitative variable
@@ -110,6 +111,15 @@ par(mfrow=c(1,2))
 barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
 
+```
+
+We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
+
+
+Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this table since we have a lot of variables, but we will try to outline the most important ones. 
+
+
+```{r descriptive table, out.width="80%"}
 # Mean, Sd, Skewness, Kurtosis
 library(moments)
 library(formattable) # Better print
@@ -150,6 +160,15 @@ formattable(desc.quantitative,
             )
 ```
 
+Let's start with the Age variable. Players age have mean 25, with a 4.7 standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
+
+Now we can look at our variable of interest, the wage. It seems that it is not at all following a normal distribution. In fact, we have a a skewness of 7.8 which means that it is very right-tailed. Furthermore, it has a kurtosis of 103 so the wage variable is extremely thick in the tails. We can back up this claim by looking at the histogram and boxplot of the wage. This variable is definitely not normal.
+
+Similarly from the wage variable, we see that the value of the player is also right-skewed and very thick in its tails. Again, we can look at the histogral/bowplot figure of the value variable and we confirm this tendency.
+
+Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around 181 cm and 75 kg, respectively.
+
+The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3.
 
 ```{r descriptive_graph, out.width="100%", fig.height=1.8}
 # Boxplot and Histogram
@@ -171,22 +190,10 @@ desc.quantitative.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
   
 }
 
-desc.quantitative.boxplots(data.frame(dataset, Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
+desc.quantitative.boxplots(data.frame(Wage=dataset$Wage, Value=dataset$Value,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
                            1, 4, T)
   
 ```
-
-Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this Table since we have a lot of variables, but we will try to outline the most important ones. 
-
-Let's start with the Age variable. Players age have mean 25, with a 4.7 standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
-
-Now we can look at our variable of interest, the wage. It seems that it is not at all following a normal distribution. In fact, we have a a skewness of 7.8 which means that it is very right-tailed. Furthermore, it has a kurtosis of 103 so the wage variable is extremely thick in the tails. We can back up this claim by looking at the histogram and boxplot of the wage. This variable is definitely not normal.
-
-Similarly from the wage variable, we see that the value of the player is also right-skewed and very thick in its tails. Again, we can look at the histogral/bowplot figure of the value variable and we confirm this tendency.
-
-Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around 181 cm and 75 kg, respectively.
-
-The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3. 
 
 We now look at the correlation matrix. The aim of this step is to detect high pairwise correlations (and therefore multicollinearity). Note that even if there were no pairwise correlations, it would not mean that there is no multicollinearity. In fact, there can be multicollinearity invisible in the correlation matrix because multicollinearity can come frome linear dependance between 3 or more variables.
 
@@ -245,13 +252,11 @@ models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 
 ## Stepwise Regression using AIC
 
-We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check wheter the AIC keeps decreasing while we include more and more variables. 
-
+We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check whether the AIC keeps decreasing while we include more and more variables. 
 
 ```{r model_selection stepwise}
 # Stepwise AIC 
 aic.mass = stepAIC(model.complete, direction = "both", trace = F)
-aic.mass
 
 formula.aic = as.formula("Wage ~ Age + Overall + Potential + Weight + HeadingAccuracy + 
     Reactions + Strength + Interceptions + Value + NationalityAmerica")
@@ -261,7 +266,6 @@ models.comparison = addComparison(lm(formula.aic, data = train), "Stepwise AIC")
 
 # Stepwise AIC log(Y)
 aic.masslogy = stepAIC(model.complete.logy, direction = "both", trace = F)
-aic.masslogy
 
 formula.aiclogy = as.formula("log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
     Reactions + Jumping + Strength + Aggression + Composure + 
@@ -305,7 +309,9 @@ models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 ## Final Model (without interactions)
 We have now looked at 6 differents models. The complete regression model, the AIC-stepwise regression model and the lasso regression model. For each of them, we have estimated a model of regression against tha wage variable and against the log_wage variable. We have done that because we suspected non linear relations in our model. 
 ```{r}
-models.comparison
+formattable(models.comparison, list(
+  formattable::area(row=4) ~ formatter("span", style= ~ style(font.weight="bold"))
+)) 
 ```
 
 The table above show a model comparison for those 6 models. We use various criteria such as the loglikelihhod, the AIC, the adjusted R-squared and the deviance. We see that the R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression).
@@ -378,7 +384,6 @@ We will first check for outliers with respect to X. For that, we calculate the l
 In fact, they are the elements on the diagonal of the projection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
 
 ```{r}
-library("matrixcalc")
 
 explanatory = train[,c("Overall", "Potential", "Weight", "HeadingAccuracy", "Reactions", "Jumping", "Strength", "Aggression", "Composure", "Marking", "Value", "NationalityAfrica", "NationalityAsia", "NationalityEurope", "Preferred_FootLeft")]
 
@@ -397,7 +402,8 @@ hii = sapply(seq(1, nrow(explanatory)),
 
 outliers_X = length(which(hii > pn))
 ```
-Using the criteria described previously, we obtain 387 outliers with respect to X (about 3% of the players). 
+
+Using the criteria described previously, we obtain <code style="font-weight:bold">`r  outliers_X`</code> outliers with respect to X (about <code style="font-weight:bold">`r round(outliers_X/nrow(explanatory), 3)*100`%</code> of the players). 
 
 Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is an outlier if 
 \[|d_i^*| > t_{n-p-1; 1-\alpha/2}\], where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\].
@@ -415,7 +421,7 @@ outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
 outliers_Y
 ols_plot_resid_stud_fit(model)
 ```
-Again, our decision rule allows us to measure the number of outliers with respect to Y. We have 611 outliers of that kind out of 14326 players, which is quite low again (about 4%). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
+Again, our decision rule allows us to measure the number of outliers with respect to Y. We have <code style="font-weight:bold">`r outliers_Y`</code> outliers of that kind out of <code style="font-weight:bold">`r nrow(explanatory)`</code> players, which is quite low again (about <code style="font-weight:bold">`r round(outliers_Y/nrow(explanatory), 3)*100`%</code>). Since $t_{`r round(nrow(explanatory)-ncol(explanatory)-2,4) `;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
 
 We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{\frac{p}{n}}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
 
@@ -430,15 +436,31 @@ DFFITS = sapply(seq(1, nrow(explanatory)),
 influential_fitted = length(which(DFFITS > 2*sqrt((1+ncol(explanatory))/nrow(explanatory))))
 
 influential_fitted
-ols_plot_dffits(model)
+p = ols_plot_dffits(model, print_plot = F)
+
+changePlot= function(p){
+  p$layers[[5]] = NULL
+  p$layers[[4]] = NULL
+  p$layers[[3]]$aes_params$colour = opt.barcolor
+  p$layers[[1]]$aes_params$colour = opt.barcolor
+  p$layers[[2]]$aes_params$colour = "black"
+  p$layers[[3]]$aes_params$shape = 16
+  return (p)
+}
+
+changePlot(p$plot)
 ```
-We only have 555 influential observations for the fitted values : that's not much again (less than 4% of the players). Since $2\sqrt{\frac{p}{n}} \approx 0.07$ in our case, under our criteria, all the influential observations are represented in red on the previous plot.
+We only have <code style="font-weight:bold">`r influential_fitted`</code> influential observations for the fitted values : that's not much again (less than 4% of the players). Since $2\sqrt{\frac{p}{n}} \approx 0.07$ in our case, under our criteria, all the influential observations are represented in red on the previous plot.
 
 
 In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. 
 
 ```{r}
-ols_plot_dfbetas(model)
+p = ols_plot_dfbetas(model, print_plot = F)
+
+for (i in 1:length(p$plots)){
+  print(changePlot(p$plots[[i]]))
+}
 ```
 
 The decision rule seen in class asserts that the i-th observation is influential if $\big|DFBETAS_{k,i}\big|>\frac{2}{\sqrt{n}}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$. In our case, $\frac{2}{\sqrt{n}} \approx 0.02$. Thus, every previous plot corresponds to the coefficient associated with the concerned variable. Then we see that there aren't much influential points for the regression coefficient associated with the \textit{Value} variable whereas the regression coefficient associated with the \textit{Preferred_FootLeft} variable has a lot of influential observations.
@@ -460,7 +482,7 @@ We will use the Variance Inflation Factors (VIF) to determine if there is multic
 ols_vif_tol(model)
 ```
 
-We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of 2.44. Since it is not extremely far from one, we decide not to do a Ridge Regression, indeed it seems not necessary so far.
+We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of <code style="font-weight:bold">2.44</code>. Since it is not extremely far from one, we decide not to do a Ridge Regression, indeed it seems not necessary so far.
 
 # Heteroskedasticity 
 
@@ -526,7 +548,7 @@ summary(model)
 ```
 
 The variable weight, jumping and PreferredFoot seem to be not significant at level 0.05. This means that for these 3 variables, we can not reject the null hypotheses that the corrisponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from strenght and marking. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. Hwever, marking and strenght abilities seem to lower the salary, and we can not think of an explantion for that phenomenon. We can now take a look more precisely at our qualitative variables (Nationality and PreferredFoot). We see that the fact to be left-footed raise on average your salary by 1000\$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the nationality variable, the Asian Nationality 
-improve your salary by 1300\$ (on average), the African Nationality by 1100\$ and the Europeean Nationality by 1100\$. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
+improve your salary by 1300\$ (on average), the African Nationality by 1100\$ and the Europeean Nationality by <code id="code">1100</code>\$. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
 
 
 
@@ -591,6 +613,23 @@ We can see above the actual values of the wage variable of the validation datase
 
 # Conclusions
 
+
+# Appendix
+
+## Histograms and boxplots
+
+```{r, fig.height=1.8, out.width="100%"}
+desc.quantitative.boxplots(data.frame(dataset,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
+                           1, 4, T)
+```
+
+## Stepwise model selection
+
+```{r}
+# Stepwise AIC 
+aic.mass
+aic.masslogy
+```
 
 
 
