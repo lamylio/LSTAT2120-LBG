@@ -4,14 +4,15 @@ author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
 date: "26/12/2020"
 output:
   prettydoc::html_pretty:
-    css : "sources/main.css"
-    theme: cayman	
-    highlight: github	
-    toc: true
+    css: sources/main.css
+    theme: cayman
+    highlight: github
+    toc: yes
     toc_depth: 3
-    fig_caption: true	
+    fig_caption: yes
     number_sections: no
   html_document: default
+  rmarkdown::html_document: default
 ---
 
 ```{r global.options, include=F}
@@ -323,18 +324,31 @@ model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy +
 We will test the interaction between the preferred foot and the marking variable.
 
 ```{r}
-model.interaction = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+model.interaction1 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
     Reactions + Jumping + Strength + Aggression + Composure + 
     Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
     Preferred_FootLeft + Preferred_FootLeft * Marking, data = train)
-
+model.interaction2 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft + Preferred_FootLeft * Value, data = train)
+model.interaction3 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft + NationalityEurope * Potential, data = train)
+model.interaction4 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
+    Reactions + Jumping + Strength + Aggression + Composure + 
+    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
+    Preferred_FootLeft + NationalityAfrica * Value, data = train)
 models.comparison = data.frame()
 models.comparison = addComparison(model, "Model")
-models.comparison = addComparison(model.interaction, "Model with interaction")
-
+models.comparison = addComparison(model.interaction1, "Model 1 with interaction")
+models.comparison = addComparison(model.interaction2, "Model 2 with interaction")
+models.comparison = addComparison(model.interaction3, "Model 3 with interaction")
+models.comparison = addComparison(model.interaction4, "Model 4 with interaction")
 ```
 
-In the comparative table above, we see that the interaction we are testing does not improve our criteria of goodness of fit. Adjusted R-squared is the same as for the model without interaction, and the AIC is even slightly greater. Therefore we will working with the model without interaction with the PreferredFoot.
+In the comparative table above, we see that the interactions we are testing does not improve a lot our criteria of goodness of fit : it is possible to get an AIC and an adjusted R-square slightly better than in the basis model (that's the case when we consider the interaction between \textit{NationalityEurope} and \textit{Potential}) but this difference isn't so much considerable. Adjusted R-squared only reaches 0.68 at best instead of 0.679 in the model without interactions and R-squared remains constant for the different tested models. Therefore we will working with the model without any interaction.
 
 # Underlying Hypotheses Testing
 
@@ -383,10 +397,7 @@ Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is a
 ```{r}
 outliers_Y=0
 for(i in 1:14326){
-  if(abs(as.matrix(rstudent(model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft, data = train)))[i])>qt(0.975, 14309)){
+  if(abs(as.matrix(rstudent(model))[i])>qt(0.975, 14309)){
     outliers_Y=outliers_Y+1
     }
 }
@@ -401,10 +412,7 @@ We now look at the influential observations for the fitted values. Recall that t
 ```{r}
 influential_fitted=0
 for(i in 1:14326){
-  if(abs(as.matrix(rstudent(model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft, data = train)))[i]*sqrt(as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,]))/(1-as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,])))))>2*sqrt(16/14326)){
+  if(abs(as.matrix(rstudent(model))[i]*sqrt(as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,]))/(1-as.matrix(explanatory[i,])%*%matrix.inverse(crossprod(as.matrix(explanatory),as.matrix(explanatory)))%*%as.matrix(t(explanatory[i,])))))>2*sqrt(16/14326)){
     influential_fitted=influential_fitted+1
     }
 }
