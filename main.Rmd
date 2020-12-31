@@ -1,5 +1,5 @@
 ---
-title: "LSTAT2120 - Linear Project"
+title: "Linear Models (LSTAT2120) - Project"
 author: "Bartolomeo Aurèle, Gengler Rémi, Lamy Lionel"
 date: "January 2021"
 output:
@@ -11,9 +11,9 @@ output:
     toc_depth: 3
     fig_caption: yes
     number_sections: no
-  html_document: default
-  rmarkdown::html_document: default
   pdf_document: default
+  rmarkdown::html_document: default
+  html_document: default
 ---
 
 ```{r global.options, include=F}
@@ -71,7 +71,7 @@ For this purpose we will use linear models only. So for a start we will look mor
 
 # Data cleaning and separtion of the dataset
 
-We start by doing a complete case analysis (i.e. eliminating all observations that contain missing values). We can do that without introducing any bias in our analysis, because observations containing missing values constitute an extremely small portion of our dataset (48 of 18207 observations, so less than <code style="font-weight:bold">`r 0.3`%</code>). We then improve the usability of the dataset by changing some units. Initially, the variable \textit{Nationality} (that recorded the nationality of the player) was encoded as the country of the player, but there were then too much levels and some of them seemed to be irrelevant, so we decided to modify it manually and replace these levels by the associated continents.
+We start by doing a complete case analysis (i.e. eliminating all observations that contain missing values). We can do that without introducing any bias in our analysis, because observations containing missing values constitute an extremely small portion of our dataset (48 of 18207 observations, so less than <code style="font-weight:bold">`r 0.3`%</code>). We then improve the usability of the dataset by changing some units. Initially, the variable \textit{Nationality} that records the nationality of the player was encoded as the country of the player. Since there were too much levels and some of them seemed to be irrelevant, we decided to modify it manually and replace these levels by the associated continents.
 Finally, we separate randomly 20% of our observations. These observations will be used for prediction, but not for model estimation. 
 
 ```{r data_setup}
@@ -103,18 +103,17 @@ dataset = within(original, {
 
 # Descriptive analysis
 
-Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called \textit{Preferred_Foot} (with two levels : Left and Right) and \textit{Nationality} (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplots.
+Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in thousands of euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in million euros). We should also emphasize the fact that we have two categorical variables called \textit{Preferred_Foot} (with two levels : Left and Right) and \textit{Nationality} (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplots.
 
 ```{r descriptive, out.width="80%"}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
-barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
-
+barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 ```
 
-We see that more than half of the players are European, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
+We observe that right-footed players are four times as many as left-footed players. We also see that more than half of the players are European, while the 4 other continents don't exceed 25% individually. 
 
 
 Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this table since we have a lot of variables, but we will try to outline the most important ones. 
@@ -161,15 +160,9 @@ formattable(desc.quantitative,
             )
 ```
 
-Let's start with the \textit{Age} variable. Players age have mean <code style="font-weight:bold">25</code>, with a <code style="font-weight:bold">`r 4.7`</code> standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
+Let's start with the \textit{Age} variable. Players age have mean <code style="font-weight:bold">25</code>, with a <code style="font-weight:bold">`r 4.7`</code> standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is slightly less than 3, which means that the variable is maybe a bit light-tailed. 
 
-Now we can look at our variable of interest, the wage. It seems that it is not at all following a normal distribution. In fact, we have a a skewness of <code style="font-weight:bold">`r 7.8`</code> which means that it is very right-tailed. Furthermore, it has a kurtosis of <code style="font-weight:bold">103</code> so the \textit{Wage} variable is extremely thick in the tails. We can back up this claim by looking at the histogram and boxplot of the wage. This variable is definitely not normal.
-
-Similarly from the \textit{Wage} variable, we see that the value of the player is also right-skewed and very thick in its tails. Again, we can look at the histogram/boxplot figure of the \textit{Value} variable and we confirm this tendency.
-
-Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around <code style="font-weight:bold">`r 181`cm</code> and <code style="font-weight:bold">`r 75`kg</code>, respectively.
-
-The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3.
+Now we can look at our variable of interest, the wage. It seems that it is not at all following a normal distribution. In fact, we have a a skewness of <code style="font-weight:bold">`r 7.9`</code> which means that it is very right-tailed. Furthermore, it has a kurtosis of <code style="font-weight:bold">102</code> so the \textit{Wage} variable is extremely thick in the tails. We can back up this claim by looking at the histogram and boxplot of the wage. This variable is definitely not normal.
 
 ```{r descriptive_graph, out.width="100%", fig.height=1.8}
 # Boxplot and Histogram
@@ -196,6 +189,13 @@ desc.quantitative.boxplots(data.frame(Wage=dataset$Wage, Value=dataset$Value,  W
   
 ```
 
+Similarly from the \textit{Wage} variable, we see in the table that the value of the player is also right-skewed and very thick in its tails. The histogram/boxplot figure of the \textit{Value} variable above confirms this tendency.
+
+Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around <code style="font-weight:bold">`r 181`cm</code> and <code style="font-weight:bold">`r 75`kg</code>, respectively.
+
+The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3.
+
+
 We now look at the correlation matrix. The aim of this step is to detect high pairwise correlations (and therefore multicollinearity). Note that even if there were no pairwise correlations, it would not mean that there is no multicollinearity. In fact, there can be multicollinearity invisible in the correlation matrix because multicollinearity can come frome linear dependance between 3 or more variables.
 
 ```{r full_corrplot}
@@ -213,12 +213,12 @@ clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
 corrplot(cor(clean_dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
-Again, this does not mean that we have no multicollinearity at all. We will look at that before model selection in the next section, with more sophisticated tools. 
+Again, this does not mean that we have no multicollinearity at all. We will look after the model selection, with more sophisticated tools. 
 
 
 # Model Selection
 
-We will now start to select variables to include in our model. We will use the two following types of model selection : a stepwise selection using AIC and a LASSO procedure. 
+We will now start to select variables to include in our model. We will use the two following types of model selection : a stepwise regression using Akaike information criterion (AIC) and a LASSO procedure. 
 
 ```{r}
 library(olsrr)
@@ -253,7 +253,7 @@ models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 
 ## Stepwise Regression using AIC
 
-We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check whether the AIC keeps decreasing while we include more and more variables. 
+We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise regression. The method will check whether the AIC keeps decreasing while we include more and more variables. 
 
 ```{r model_selection stepwise}
 # Stepwise AIC 
@@ -384,7 +384,7 @@ We will first check for outliers with respect to X. For that, we calculate the l
 In fact, they are the elements on the diagonal of the projection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
 
 ```{r}
-
+library(matrixcalc)
 explanatory = train[,c("Overall", "Potential", "Weight", "HeadingAccuracy", "Reactions", "Jumping", "Strength", "Aggression", "Composure", "Marking", "Value", "NationalityAfrica", "NationalityAsia", "NationalityEurope", "Preferred_FootLeft")]
 
 pn = (1+ncol(explanatory))*2/nrow(explanatory)
