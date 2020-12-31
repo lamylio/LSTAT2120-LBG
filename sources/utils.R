@@ -2,8 +2,8 @@ models.comparison = data.frame()
 
 addComparison = function(model, model_name){
   to_combine = data.frame(
-    Variable = as.character(model_name),
-    Count = length(names(coef(model)))-1,
+    Model = as.character(model_name),
+    Vars = length(names(coef(model)))-1,
     LogLik = ifelse(is.null(logLik(model)[1]), yes=NA, no=round(logLik(model)[1], opt.digits)),
     AIC = round(AIC(model), opt.digits),
     #BIC = round(BIC(model), opt.digits),
