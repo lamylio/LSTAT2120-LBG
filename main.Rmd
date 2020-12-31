@@ -241,7 +241,7 @@ models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 ```
 
 ## Final Model (without interactions)
-We have now looked at 6 differents models. The complete regression model, the AIC-stepwise regression model and the LASSO regression model. For each of them, we have estimated a model of regression against the \textit{Wage} variable and against the \textit{log_wage} variable. We have done that because we suspected non linear relations in our model. 
+We have now looked at 6 differents models : the complete regression model (two kinds), the AIC-stepwise regression model (two kinds) and the LASSO regression model (two kinds). Indeed, for each of them, we have estimated a model of regression against the \textit{Wage} variable and against the \textit{log_wage} variable. We have done that because we suspected non linear relations in our model. 
 ```{r}
 formattable(models.comparison, list(
   formattable::area(row=4) ~ formatter("span", style= ~ style(font.weight="bold"))
@@ -260,7 +260,7 @@ model = model.aiclogy
 
 ## Interactions
 
-We will test the interaction between the \textit{Preferred_Foot} and the \textit{Marking} variables.
+We test different possible interactions in the following. The first model with interaction contains an interaction term between the \textit{Preferred_FootLeft} variable and the \textit{Marking} variable. We then consider interaction between \textit{Preferred_FootLeft} and \textit{Value} (Model 2 with interaction), interaction between \textit{NationalityEurope} and \textit{Potential} (Model 3 with interaction) and interaction between \textit{NationalityAfrica} and \textit{Value} (Model 4 with interaction).
 
 ```{r}
 
@@ -280,6 +280,7 @@ models.comparison = addComparison(model.interaction1, "Model 1 with interaction"
 models.comparison = addComparison(model.interaction2, "Model 2 with interaction")
 models.comparison = addComparison(model.interaction3, "Model 3 with interaction")
 models.comparison = addComparison(model.interaction4, "Model 4 with interaction")
+formattable(models.comparison)
 ```
 
 In the comparative table above, we see that the interactions we are testing does not improve a lot our criteria of goodness of fit : it is possible to get an AIC and an adjusted R-square slightly better than in the basis model (that's the case when we consider the interaction between \textit{NationalityEurope} and \textit{Potential}) but this difference isn't so much considerable. Adjusted R-squared only reaches <code style="font-weight:bold">`r 0.68`</code> at best instead of <code style="font-weight:bold">`r 0.679`</code> in the model without interactions and R-squared remains constant for the different tested models. Therefore we will work with the model without any interaction.
@@ -344,7 +345,7 @@ outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
     return(abs(rStudentModel[i]) > quantileStudent)
   }                        
 ))
-t = ols_plot_resid_stud_fit(model, print_plot = F)
+t = ols_plot_resid_stud_fit(model, print_plot = T)
 t$plot$layers[[3]] = NULL;t$plot$layers[[3]] = NULL;
 ```
 Again, our decision rule allows us to measure the number of outliers with respect to Y. We have <code style="font-weight:bold">`r outliers_Y`</code> outliers of that kind out of <code style="font-weight:bold">`r nrow(explanatory)`</code> players, which is quite low again (about <code style="font-weight:bold">`r round(outliers_Y/nrow(explanatory), 3)*100`%</code>). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
@@ -370,22 +371,13 @@ We only have <code style="font-weight:bold">`r influential_fitted`</code> influe
 
 In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. 
 
-```{r}
-p = ols_plot_dfbetas(model, print_plot = F)
-
-
-# TODO in layout!
-for (i in 1:length(p$plots)){
-  print(changePlot(p$plots[[i]]))
-}
-```
 
 The decision rule seen in class asserts that the i-th observation is influential if $\big|DFBETAS_{k,i}\big|>\frac{2}{\sqrt{n}}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$. In our case, $\frac{2}{\sqrt{n}} \approx 0.02$. Thus, every previous plot corresponds to the coefficient associated with the concerned variable. Then we see that there aren't much influential points for the regression coefficient associated with the \textit{Value} variable whereas the regression coefficient associated with the \textit{Preferred_FootLeft} variable has a lot of influential observations.
 
 To have an overview of all the influential points, we look at the Cooks distance. 
 
 ```{r}
-plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance")
+plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance", pch=21, bg = opt.barcolor)
 abline(h=4/14326, col="red")
 ```
 The Cooks distances are very low (close to 0 for the wide majority). We choose as decision rule that the influential points are the ones for which the Cooks distance $D_i$ is bigger than $\frac{4}{n}$ (threshold represented in red on the previous plot) where $n$ is the number of observations (common criteria). 
@@ -408,7 +400,7 @@ We plot the residuals against the fitted values to consider possible heteroskeda
 
 ```{r}
 #Residuals vs fitted
-plot(model$residuals, model$fitted.values)
+plot(model$residuals, model$fitted.values, pch=21, bg=opt.barcolor)
 ```
 It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicated to decide only on basis of this graph whether there is heteroskedasticity, so we decide to do a Breusch-Pagan test.
 
@@ -560,6 +552,15 @@ aic.mass
 aic.masslogy
 ```
 
+## Influence diagnostics
+
+```{r}
+# TODO in layout!
+p = ols_plot_dfbetas(model, print_plot = F)
+for (i in 1:length(p$plots)){
+  print(changePlot(p$plots[[i]]))
+}
+```
 
 
 
