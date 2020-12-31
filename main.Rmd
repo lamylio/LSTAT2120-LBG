@@ -36,29 +36,12 @@ rmarkdown::html_document(df_print = "formattable")
 
 ```{r options}
 opt.digits = 3
-opt.barcolor = "#0a4d7d"
+opt.barcolor = "blue" #"#0a4d7d"
 ```
 
 ```{r utils}
-models.comparison = data.frame()
-
-addComparison = function(model, model_name){
-  to_combine = data.frame(
-      Variable = as.character(model_name),
-      LogLik = ifelse(is.null(logLik(model)[1]), yes=NA, no=round(logLik(model)[1], opt.digits)),
-      AIC = round(AIC(model), opt.digits),
-      #BIC = round(BIC(model), opt.digits),
-      R2 = round(summary(model)$r.squared, opt.digits),
-      Adjusted.R2 = round(summary(model)$adj.r.squared, opt.digits),
-      Deviance = ifelse(is.null(deviance(model)), yes=NA, no=round(deviance(model), opt.digits))
-      #Deviance.custom = cost_deviance(base_train_freq$Frequency, model$fitted),
-      #row.names = as.character(model_name)
-  )
-  rbind(
-    models.comparison,
-    to_combine
-  )
-}
+source("./sources/utils.R")
+source("./sources/descriptive.R")
 ```
 
 # Introduction and objective
@@ -121,44 +104,11 @@ Now we can take a look at the table that shows some interesting descriptive valu
 
 
 ```{r descriptive table, out.width="80%"}
-# Mean, Sd, Skewness, Kurtosis
-library(moments)
-library(formattable) # Better print
-library(ggplot2)
-library(gridExtra)
 
-desc.quantitative = (function(data){
-  
-  addStats = function(col, name){
-    
-    return(data.frame(
-      Variable=name,
-      Mean = round(mean(col, na.rm = T), opt.digits),
-      Std.Deviation = round(sd(col), opt.digits),
-      Skewness = round(skewness(col), opt.digits),
-      Kurtosis = round(kurtosis(col), opt.digits)
-      ))
-  }
-  
-  for (c in colnames(data)){
-    if (exists("results")){
-      results = rbind(results, addStats(data[[c]], c))
-    }else{
-      results = addStats(data[[c]], c)
-    }
-  }
-  return (results)
-   
-})(dataset)
 
-desc.quantitative.order = order(as.character(desc.quantitative$Variable))
-desc.quantitative = desc.quantitative[desc.quantitative.order,]
-row.names(desc.quantitative) = NULL # hide row number
+desc.quantitative = compute.desc.quantitative(dataset)
 
-formattable(desc.quantitative,
-            align=c("l", rep("c", ncol(desc.quantitative)-1))
-            #,list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, ifelse(abs(x) >= 2,"red", "orange"), "black"))))
-            )
+formattable(desc.quantitative, align=c("l", rep("c", ncol(desc.quantitative)-1)))
 ```
 
 Let's start with the \textit{Age} variable. Players age have mean <code style="font-weight:bold">25</code>, with a <code style="font-weight:bold">`r 4.7`</code> standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
@@ -174,25 +124,10 @@ The remaining variables are all about players abilities. Like we have already sa
 ```{r descriptive_graph, out.width="100%", fig.height=1.8}
 # Boxplot and Histogram
 
-desc.quantitative.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
-  
-  
-  layout(mat=matrix(seq(nrow*ncol*2), 2*nrow, 1*ncol, byrow=F), heights = rep(c(4,1.5), ncol))
-  drawPlots = function(coname){
-    
-    par(mar=c(0, 2, 2, 2))
-    hist(data[[coname]], axes=T, main=coname, col = opt.barcolor, xlab="", ylab="Count", xaxt="n")
-    par(mar=c(3, 2.3, 0, 2.3))
-    boxplot(data[[coname]], horizontal = T, frame=boxframe)
-    
-  }
-  
-  invisible(sapply(colnames(data), function (x) drawPlots(x)))
-  
-}
-
-desc.quantitative.boxplots(data.frame(Wage=dataset$Wage, Value=dataset$Value,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
-                           1, 4, T)
+draw.hist.boxplots(
+  data.frame(Wage=dataset$Wage, Value=dataset$Value,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
+  1, 4, TRUE
+)
   
 ```
 
@@ -210,6 +145,10 @@ After this suppression, we see that the following correlation matrix is better, 
 ```{r min_corrplot}
 # Suppression/merge of correlated variables
 clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
+
+# Est-ce qu'on met la Value en log ? 
+# clean_dataset$Value = log(clean_dataset$Value)
+
 corrplot(cor(clean_dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
@@ -235,15 +174,13 @@ valid = cbind(clean_dataset[-tmp,], dummies[-tmp,])
 
 rm(tmp)
 
+
+# ---
 formula.complete = as.formula("Wage ~ .")
 formula.complete.logy = as.formula("log(Wage) ~ .")
 
-formula.without = as.formula("Wage ~ . - Value")
-
 model.complete = lm(formula.complete, data=train)
 model.complete.logy = lm(formula.complete.logy, data=train)
-
-model.without = lm(formula.without, data=train)
 
 models.comparison = addComparison(model.complete, "Complete")
 models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
@@ -257,24 +194,22 @@ We will use a stepwise function that finds a model that minimizes AIC, using a s
 
 ```{r model_selection stepwise}
 # Stepwise AIC 
+
 aic.mass = stepAIC(model.complete, direction = "both", trace = F)
+formula.aic = as.formula(paste0("Wage ~ ", paste(names(aic.mass$coefficients)[-1:0], collapse=" + ")))
 
-formula.aic = as.formula("Wage ~ Age + Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Strength + Interceptions + Value + NationalityAmerica")
-
-
-models.comparison = addComparison(lm(formula.aic, data = train), "Stepwise AIC")
 
 # Stepwise AIC log(Y)
+
 aic.masslogy = stepAIC(model.complete.logy, direction = "both", trace = F)
-
-formula.aiclogy = as.formula("log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft")
+formula.aiclogy = as.formula(paste0("log(Wage) ~ ", paste(names(aic.masslogy$coefficients)[-1:0], collapse=" + ")))
 
 
-models.comparison = addComparison(lm(formula.aiclogy, data = train), "Stepwise AIC log(Y)")
+model.aic = lm(formula.aic, data = train)
+model.aiclogy = lm(formula.aiclogy, data = train)
+
+models.comparison = addComparison(model.aic, "Stepwise AIC")
+models.comparison = addComparison(model.aiclogy, "Stepwise AIC log(Y)")
 ```
 
 In the stepwise summary in the appendix we see that the selection discards 6 variables : \textit{Age}, \textit{Height}, \textit{Weight}, \textit{Jumping}, \textit{Marking} and \textit{Strength}.  
@@ -290,18 +225,17 @@ Indeed, for a certain coefficient t>0 to be determined, we impose that \[ \sum_{
 lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = train$Wage, family = "gaussian", alpha = 1)
 lasso.coef = coef(lasso.cv, s="lambda.min")
 
-formula.lasso = as.formula("Wage ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Interceptions + Composure + Marking + Value + NationalityAfrica + NationalityAmerica + NationalityEurope + NationalityOceania + Preferred_FootLeft")
+formula.lasso = as.formula(paste0("Wage ~ ", paste(rownames(lasso.coef)[-1:0], collapse=" + ")))
 model.lasso = lm(formula.lasso, data=train)
 
 models.comparison = addComparison(model.lasso, "Lasso")
-
 
 
 #lasso log(Y)
 lasso.cvlogy = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = log(train$Wage), family = "gaussian", alpha = 1)
 lasso.coeflogy = coef(lasso.cvlogy, s="lambda.min")
 
-formula.lassology = as.formula("log(Wage) ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Aggression + Composure + Marking + Value + NationalityAfrica + NationalityAmerica +  NationalityAsia + NationalityEurope + NationalityOceania + Preferred_FootLeft + Preferred_FootRight")
+formula.lassology = as.formula(paste0("log(Wage) ~ ", paste(rownames(lasso.coeflogy)[-1:0], collapse=" + ")))
 model.lassology = lm(formula.lassology, data=train)
 
 models.comparison = addComparison(model.lassology, "Lasso log(Y)")
@@ -319,10 +253,9 @@ The table above shows a model comparison for those 6 models. We use various crit
 
 ```{r}
 #setting the final model (aic logy)
-model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft, data = train)
+model = model.aiclogy
+  
+# lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Aggression + Composure + Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + Preferred_FootLeft, data = train)
 
 ```
 
@@ -331,22 +264,17 @@ model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy +
 We will test the interaction between the \textit{Preferred_Foot} and the \textit{Marking} variables.
 
 ```{r}
-model.interaction1 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft + Preferred_FootLeft * Marking, data = train)
-model.interaction2 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft + Preferred_FootLeft * Value, data = train)
-model.interaction3 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft + NationalityEurope * Potential, data = train)
-model.interaction4 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft + NationalityAfrica * Value, data = train)
+
+formula.model = paste0("log(Wage) ~ ", paste(names(coef(model))[0:-1], collapse=" + "))
+
+model.interaction1 = lm(paste0(formula.model, " + Preferred_FootLeft * Marking"), data = train)
+
+model.interaction2 = lm(paste0(formula.model, " + Preferred_FootLeft * Value"), data = train)
+
+model.interaction3 = lm(paste0(formula.model, " + NationalityEurope * Potential"), data = train)
+
+model.interaction4 = lm(paste0(formula.model, " + NationalityAfrica * Value"), data = train)
+
 models.comparison = data.frame()
 models.comparison = addComparison(model, "Model")
 models.comparison = addComparison(model.interaction1, "Model 1 with interaction")
@@ -385,13 +313,13 @@ In fact, they are the elements on the diagonal of the projection matrix $H=X(X'X
 
 ```{r}
 
-explanatory = train[,c("Overall", "Potential", "Weight", "HeadingAccuracy", "Reactions", "Jumping", "Strength", "Aggression", "Composure", "Marking", "Value", "NationalityAfrica", "NationalityAsia", "NationalityEurope", "Preferred_FootLeft")]
+explanatory = train[, names(coef(model))[0:-1]]
 
 pn = (1+ncol(explanatory))*2/nrow(explanatory)
 
 mafull = as.matrix(explanatory)
 macross = crossprod(mafull, mafull)
-mainv = matrix.inverse(macross)
+mainv = solve(macross)
 
 hii = sapply(seq(1, nrow(explanatory)), 
   function(i){
@@ -418,7 +346,8 @@ outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
     return(abs(rStudentModel[i]) > quantileStudent)
   }                        
 ))
-ols_plot_resid_stud_fit(model)
+t = ols_plot_resid_stud_fit(model, print_plot = F)
+t$plot$layers[[3]] = NULL;t$plot$layers[[3]] = NULL;
 ```
 Again, our decision rule allows us to measure the number of outliers with respect to Y. We have <code style="font-weight:bold">`r outliers_Y`</code> outliers of that kind out of <code style="font-weight:bold">`r nrow(explanatory)`</code> players, which is quite low again (about <code style="font-weight:bold">`r round(outliers_Y/nrow(explanatory), 3)*100`%</code>). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
 
@@ -436,16 +365,6 @@ influential_fitted = length(which(abs(DFFITS) > 2*sqrt((1+ncol(explanatory))/nro
 
 p = ols_plot_dffits(model, print_plot = F)
 
-changePlot= function(p){
-  p$layers[[5]] = NULL
-  p$layers[[4]] = NULL
-  p$layers[[3]]$aes_params$colour = opt.barcolor
-  p$layers[[1]]$aes_params$colour = opt.barcolor
-  p$layers[[2]]$aes_params$colour = "black"
-  p$layers[[3]]$aes_params$shape = 16
-  return (p)
-}
-
 changePlot(p$plot)
 ```
 We only have <code style="font-weight:bold">`r influential_fitted`</code> influential observations for the fitted values : that's not much again (less than 4% of the players). Since $2\sqrt{\frac{p}{n}} \approx 0.07$ in our case, under our criteria, all the influential observations are the observations that exceed the thresholds on the previous plot.
@@ -456,6 +375,8 @@ In addition to that kind of influential observations, we have to consider the in
 ```{r}
 p = ols_plot_dfbetas(model, print_plot = F)
 
+
+# TODO in layout!
 for (i in 1:length(p$plots)){
   print(changePlot(p$plots[[i]]))
 }
@@ -560,7 +481,7 @@ We will now test if a linear combination of our coeficients holds. We are intere
 
 ```{r}
 library(car)
-hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 1, 1, 1, 0, 0, 0, 0, 0)
+hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 0, 1, 1, 1, 0, 0, 0, 0, 0)
 linearHypothesis(model, hypothesis.matrix = hyp)
 
 ```
