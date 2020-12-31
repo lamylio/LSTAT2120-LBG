@@ -241,15 +241,15 @@ models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 ```
 
 ## Final Model (without interactions)
-We have now looked at 6 differents models : the complete regression model (two kinds), the AIC-stepwise regression model (two kinds) and the LASSO regression model (two kinds). Indeed, for each of them, we have estimated a model of regression against the \textit{Wage} variable and against the \textit{log_wage} variable. We have done that because we suspected non linear relations in our model. 
+We have now looked at 6 different models : the complete regression model (two kinds), the AIC-stepwise regression model (two kinds) and the LASSO regression model (two kinds). Indeed, for each of them, we have estimated a model of regression against the \textit{Wage} variable and against the \textit{log_wage} variable. We have done that because we suspected non linear relations in our model. 
 ```{r}
 formattable(models.comparison, list(
   formattable::area(row=4) ~ formatter("span", style= ~ style(font.weight="bold"))
 )) 
 ```
 
-The table above shows a model comparison for those 6 models. We use various criteria such as the loglikelihhod, the AIC, the adjusted R-squared and the deviance. We see that the adjusted R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model with log of the \textit{Wage} variable because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression).
-
+The table above shows a model comparison for those 6 models. We use various criteria such as the log-likelihood, the AIC, the adjusted R-squared and the deviance. We see that the adjusted R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model with log of the \textit{Wage} variable because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression). The final is then given by \[\log{Wage} = -7.96 + 0.11 Overall + 0.018Potential + 0.0021Weight + 0.005HeadingAccuracy + 0.0034Reactions \\ - 0.0008Jumping - 0.0035Strength + 0.002Aggression + 0.0018Composure - 0.003 Marking + 0.028Value \\ + 0.104NationalityAfrica + 0.284NationalityAsia + 0.117NationalityEurope + 0.021Preferred\_FootLeft\]
+where \textit{NationalityAfrica}, \textit{NationalityAsia}, \textit{NationalityEurope} and \textit{Preferred_FootLeft} are dummy variables.
 ```{r}
 #setting the final model (aic logy)
 model = model.aiclogy
@@ -287,7 +287,7 @@ In the comparative table above, we see that the interactions we are testing does
 
 # Underlying Hypotheses Testing
 
-We will now check for nonlinearity, outliers (and influential observations), multicollinearity, heteroskedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
+We will now check for nonlinearity, outliers and influential observations, multicollinearity, heteroskedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fulfilled, we will try to take remedial actions.
 
 ## Nonlinearity
 
