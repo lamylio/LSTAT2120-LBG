@@ -28,3 +28,8 @@ changePlot = function(p){
   p$layers[[3]]$aes_params$shape = 16
   return (p)
 }
+
+removeBackground = function(p){
+  p$theme = list(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank())
+  return (p)
+}

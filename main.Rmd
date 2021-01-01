@@ -50,7 +50,15 @@ For this project, we will use a dataset that contains all the FIFA 19 player cha
 
 The purpose of our project is to predict the wage of a player based on all his features. This is a very interesting question because it could help club managers to know if some of their players are being underpaid (that would push the player to leave) or overpaid (that could be a threat to club finances). It could also help recruiters to have an idea of the price to pay for a player, depending on the features he is looking for. Finally, it would be a helpful tool for young players, for example to know on which feature they have to work in order to have their wage increased.
 
-For this purpose we will use linear models only. So for a start we will look more precisely at our dataset and see if the classical assumptions for linear models are respected. We will also check for nonlinearity, influential observations, multicollinearity, heteroskedasticity and autocorrelation. All these concepts will be reexplained in the appropriate section. If some hypotheses seem clearly not satisfied, we will then take remedial actions. We will retain different models based on several regression methods seen in course and will compare them based on robust criterions (for example, their ability to predict correctly the value of the wage for a completely new player).
+For this purpose we will use linear models only. So for a start we will look more precisely at our dataset and see if the classical assumptions for linear models are respected. That is, we check if 
+
+1. The $X$ matrix of explanatory variables is of full rank (i.e. $rk(X)=p$)
+2. $X$ is a fixed matrix
+3. The error terms $\epsilon_1, ..., \epsilon_n$ are independent
+4. $E[\epsilon] = 0$
+5. $Var(\epsilon)=\sigma^2I_n$
+
+We will also check for nonlinearity, influential observations, multicollinearity (this is linked to assumption 1), heteroskedasticity (this is assumption 5) and autocorrelation (this is linked to assumption 3). All these concepts will be reexplained in the appropriate section. If some hypotheses seem clearly not satisfied, we will then take remedial actions. We will retain different models based on several regression methods seen in course and will compare them based on robust criterions (for example, their ability to predict correctly the value of the wage for a completely new player).
 
 # Data cleaning and separtion of the dataset
 
@@ -125,10 +133,11 @@ draw.hist.boxplots(
 
 Similarly from the <i>Wage</i> variable, we see in the table that the value of the player is also right-skewed and very thick in its tails. The histogram/boxplot figure of the <i>Value</i> variable above confirms this tendency.
 
-Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around <code id="code">`r 181`cm</code> and <code id="code">`r 75`kg</code>, respectively.
+We can see in the histograms above that, if we take the log of these two variables (<i>Wage</i> and <i>Value</i>), we obtain much more suitable distributions. The <Wage> distribution is less agglutinated near zero, and the <Value> distribution seems even normally distributed.
+
+Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around <code id="code">`r round(mean(dataset$Weight))`kg</code> and <code id="code">`r round(mean(dataset$Height))`cm</code>, respectively.
 
 The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3.
-
 
 We now look at the correlation matrix. The aim of this step is to detect high pairwise correlations (and therefore multicollinearity). Note that even if there were no pairwise correlations, it would not mean that there is no multicollinearity. In fact, there can be multicollinearity invisible in the correlation matrix because multicollinearity can come frome linear dependance between 3 or more variables.
 
@@ -137,7 +146,8 @@ library(corrplot)
 corrplot(cor(dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
-We have here the upper part of the correlation matrix. We see that all variables in the bottom right have very high pairwise correlations (lots of those correlations are even superior to <code id="code">`r 0.8`</code>). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the <i>Overall</i> variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
+We have here the upper part of the correlation matrix. We see that we have a triangle of variables that have very high pairwise correlations (lots of those correlations are even superior to <code id="code">`r 0.8`</code>). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the <i>Overall</i> variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
+
 
 After this suppression, we see that the following correlation matrix is better, in the sense that we have no longer blocks of high correlated variables. 
 
@@ -156,7 +166,7 @@ Again, this does not mean that we have no multicollinearity at all. We will look
 
 # Model Selection
 
-We will now start to select variables to include in our model. We will use the two following types of model selection : a stepwise regression using Akaike information criterion (AIC) and a LASSO procedure. 
+We will now start to select variables to include in our model. We will use the two following types of model selection: a stepwise regression using Akaike information criterion (AIC) and a LASSO procedure. 
 
 ```{r}
 library(olsrr)
@@ -189,7 +199,7 @@ models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 
 ## Stepwise Regression using AIC
 
-We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. Let $\hat{L}$ be the maximized value of the <a href="https://en.wikipedia.org/wiki/Likelihood_function">likelihood function</a>, so the lower the AIC, the better the goodness of fit of the model. $$AIC = 2k - 2\log(\hat{L})$$ This is what we need in order to do a stepwise regression. The method will check whether the AIC keeps decreasing while we include or remove more and more variables. 
+We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. Let $\hat{L}$ be the maximized value of the <a href="https://en.wikipedia.org/wiki/Likelihood_function">likelihood function</a>, so the lower the AIC, the better the goodness of fit of the model. $$AIC = 2k - 2\log(\hat{L})$$ This is what we need in order to do a stepwise regression. The method will check whether the AIC keeps decreasing while we include or remove more and more variables. This is what we need in order to do a stepwise regression. The method will check whether the AIC keeps decreasing while we include more and more variables. 
 
 ```{r model_selection stepwise}
 # Stepwise AIC 
@@ -301,12 +311,12 @@ We will now check for nonlinearity, outliers and influential observations, multi
 
 We would like to check whether it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with $j = 1, ..., p-1$.  
 
-```{r}
+```{r, fig.height=3, out.width="100%"}
 #train$Value = log(train$Value)
-par(mfrow=c(4,4))
-for(i in 1:15){
-  par(mar=c(2,2,2,1))
-  plot(x = train[,i], y=lm(as.formula(paste0("log(Wage) ~ ", colnames(train)[i])), data=train)$residuals, main = colnames(train)[i], ylab = "Residuals", pch=16, col=opt.barcolor)
+par(mfrow=c(2,4))
+for(i in 2:6){
+  par(mar=c(2,4,2,1))
+  plot(x = unlist(model$model[i]), y=model$residuals, main = names(coef(model))[i], ylab = "Residuals", pch=16, col=opt.barcolor)
 }
 
 ```
@@ -353,10 +363,9 @@ outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
     return(abs(rStudentModel[i]) > quantileStudent)
   }                        
 ))
-t = ols_plot_resid_stud_fit(model, print_plot = T)
-t$plot$layers[[3]] = NULL;t$plot$layers[[3]] = NULL;
+
 ```
-Again, our decision rule allows us to measure the number of outliers with respect to Y. We have <code id="code">`r outliers_Y`</code> outliers of that kind out of <code id="code">`r nrow(explanatory)`</code> players, which is quite low again (about <code id="code">`r round(outliers_Y/nrow(explanatory), 3)*100`%</code>). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
+Again, our decision rule allows us to measure the number of outliers with respect to Y. We have <code id="code">`r outliers_Y`</code> outliers of that kind out of <code id="code">`r nrow(explanatory)`</code> players, which is quite low again (about <code id="code">`r round(outliers_Y/nrow(explanatory), 3)*100`%</code>). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the plot in <a href="#appendix-outliers">appendix</a>. 
 
 We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{\frac{p}{n}}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
 
@@ -380,27 +389,38 @@ We only have <code id="code">`r influential_fitted`</code> influential observati
 In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. 
 
 
-The decision rule seen in class asserts that the i-th observation is influential if $\big|DFBETAS_{k,i}\big|>\frac{2}{\sqrt{n}}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$. In our case, $\frac{2}{\sqrt{n}} \approx 0.02$. Thus, every previous plot corresponds to the coefficient associated with the concerned variable. Then we see that there aren't much influential points for the regression coefficient associated with the <i>Value</i> variable whereas the regression coefficient associated with the <i>Preferred_FootLeft</i> variable has a lot of influential observations.
+The decision rule seen in class asserts that the i-th observation is influential if : 
+
+$$ \big|DFBETAS_{k,i}\big|>\frac{2}{\sqrt{n}}, \text{where} \\
+ DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}} \; \text{and} \; c_k=(X'X)_{kk}^{-1}$$ 
+
+In our case, $\frac{2}{\sqrt{n}} \approx 0.02$. Thus, <b style="color: red">every previous plot corresponds to the coefficient</b> associated with the concerned variable. Then we see that there aren't much influential points for the regression coefficient associated with the <i>Value</i> variable whereas the regression coefficient associated with the <i>Preferred_FootLeft</i> variable has a lot of influential observations.
 
 To have an overview of all the influential points, we look at the Cooks distance. 
 
 ```{r}
-plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance", pch=21, bg = opt.barcolor)
-abline(h=4/14326, col="red")
+plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance", pch=16, col = opt.barcolor)
+abline(h=4/14326, col="red", lwd=2)
 ```
+<b style="color: red"> DEFINE COOK DISTANCE</b>
+
 The Cooks distances are very low (close to 0 for the wide majority). We choose as decision rule that the influential points are the ones for which the Cooks distance $D_i$ is bigger than $\frac{4}{n}$ (threshold represented in red on the previous plot) where $n$ is the number of observations (common criteria). 
 
 
 # Multicollinearity
 
-We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1 (A $VIF_k$ greater than 10 means that the corresponding $R^2_k$ is larger than 0.9, which is a sign of approximate collinearity). This method, instead of the pairwise correlation matrix that we analyzed before, has the advantage to detect also multicollinearity relations involving more than 2 variables.
+We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $$VIF_k = \frac{1}{1-R_k^2} \; \text{for} \; k=1,..., p-1 \; \textrm{where} \; R_k^2$$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than <code id="code">10</code> or if the average VIF is considerably larger than <code id="code">1</code> (A $VIF_k$ greater than <code id="code">10</code> means that the corresponding $R^2_k$ is larger than <code id="code">0.9</code>, which is a sign of approximate collinearity). This method, instead of the pairwise correlation matrix that we analyzed before, has the advantage to detect also multicollinearity relations involving more than <code id="code">2</code> variables.
 
 ```{r}
 p = ols_vif_tol(model)
+p = within(p, {
+  Tolerance = round(Tolerance, opt.digits)
+  VIF = round(VIF, opt.digits)
+})
 formattable(p, align=c("l", "c", "c"))
 ```
 
-We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of <code id="code">2.44</code>. Since it is not extremely far from one, we decide not to take remedial actions such as a Ridge Regression. 
+<b style="color: red">We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of <code id="code">2.44</code>. Since it is not extremely far from one, we decide not to take remedial actions such as a Ridge Regression. </b>
 
 # Heteroskedasticity 
 
@@ -408,17 +428,18 @@ Based on the scatter plots of the residuals $e_i$ against $X_{ij}$, with $j = 1,
 
 ```{r}
 #Residuals vs fitted
-plot(model$residuals, model$fitted.values, xlab="Residuals", ylab="Fitted Values", pch=21, bg=opt.barcolor)
+plot(model$fitted.values, model$residuals, xlab="Fitted values", ylab="Residuals", pch=16, col=opt.barcolor, main = "Residual vs Fitted Values")
+abline(h=0, col=2, lwd=2)
 ```
 It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicated to decide only on basis of this graph whether there is heteroskedasticity, so we decide to do a Breusch-Pagan test. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
 
 
 ```{r}
-ols_test_breusch_pagan(model, rhs = T, multiple=T)
-
+t = ols_test_breusch_pagan(model, rhs = T, multiple=T)
+t
 ```
 
-With a p-value of <code id="code">3.6e-174</code>, it is perfectly clear that we can reject the null hypothesis of homoskedasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent. As a result, we don't really have to consider remedial actions such as the method of weighted least squares and Box-Cox transformation.
+With a p-value of <code id="code">`r round(t[[2]][length(t[[2]])],163)`</code>, it is perfectly clear that we can reject the null hypothesis of homoskedasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent. As a result, we don't really have to consider remedial actions such as the method of weighted least squares and Box-Cox transformation.
 
 
 # Autocorrelation
@@ -426,8 +447,7 @@ With a p-value of <code id="code">3.6e-174</code>, it is perfectly clear that we
 Autocorrelation is discussed through the Breusch-Godfrey test. Recall that this test looks at non-autocorrelation ($H_0$) versus autocorrelation ($H_1$). The null hypothesis can be written as $Corr(\varepsilon_t, \varepsilon_{t-k})=0$ for $k=1,...,p$.
 
 ```{r}
-bgtest(model)
-
+bgtest(model, order = 8)
 ```
 
 
@@ -450,7 +470,6 @@ Therefore, the points on this graph should follow the straight line. We see that
 \[JB = \frac{n}{6} \Big[\hat{S^2}+\frac{(\hat\kappa-3)^2}{4}\Big] \sim \chi^2_2\] under $H_0$.
 
 ```{r}
-
 jarque.test(model$residuals)
 ```
 
@@ -466,19 +485,24 @@ We show below the estimates and significance test for the variables that are inc
 summary(model)
 ```
 
+<b style="color: red">
 The variable <i>Weight</i>, <i>Jumping</i> and <i>Preferred_Foot</i> seem to be not significant at level <code id="code">0.05</code>. This means that for these 3 variables, we can not reject the null hypothesis that the corresponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from <i>Strength</i> and <i>Marking</i>. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. However, marking and strength abilities seem to lower the salary, and we can not think of an explanation for that phenomenon. We can now take a look more precisely at our qualitative variables (<i>Nationality</i> and <i>Preferred_Foot</i>). We see that the fact to be left-footed raise on average your salary by 1000\$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the <i>Nationality</i> variable, the Asian Nationality 
 improve your salary by 1300\$ (on average), the African Nationality by 1100\$ and the European Nationality by 1100. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
+</b>
 
 
 
 # Coefficient Linear Combination
 
-We will now test if a linear combination of our coeficients holds. We are interested in the effect of the <i>Overall</i> variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis : 
+We will now test if a linear combination of our coeficients holds. We are interested in the effect of the <i>Overall</i> variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis :
+<b style="color: red">
 \[H_0 : \beta_{Overall} 
 \\= \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
 \beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
+</b>
 
 ```{r ,eval=F}
+# TODO 
 library(car)
 hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 1, 1, 1, 0, 0, 0, 0, 0)
 linearHypothesis(model, hypothesis.matrix = hyp)
@@ -516,11 +540,10 @@ It is wider than the confidence region for $E[Y_h]$ because for $Y_h$ we also ha
 ```{r}
 predictions = exp(predict(model, newdata = valid, interval = "confidence"))
 
-plot(1:nrow(valid), valid$Wage, pch=16, cex=0.2, xlab="Obs", ylab="Wage")
-legend("topright", legend = c("Observed Values", "Predicted Values"), fill = c("black", opt.barcolor))
-points(1:nrow(valid), predictions[,1], col=opt.barcolor, pch=16, cex=0.1)
-# points(1:nrow(valid), predictions[,2], col=2, pch=16, cex=0.1)
-# points(1:nrow(valid), predictions[,3], col=2, pch=16, cex=0.1)
+plot(1:nrow(valid), valid$Wage, pch=16, cex=0.5, xlab="Obs", ylab="Wage", main="Observed vs Predicted", 
+     col=rgb(0, 0, 0, alpha=125, max=255))
+legend("topright", legend = c("Observed Values", "Predicted Values"), pch = c(16,16), col=c(1,4))
+points(1:nrow(valid), predictions[,1], col=opt.barcolor, pch=16, cex=0.5)
 
 aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,3]))
 k=aimed / nrow(valid)*100
@@ -566,13 +589,27 @@ print(model.lassology)
 lasso.cvlogy$glmnet.fit
 ```
 
-## Influence diagnostics
+## Outliers
 
 ```{r}
-# TODO in layout!
+t = ols_plot_resid_stud_fit(model, print_plot = F)
+t$plot$layers[[3]] = NULL;t$plot$layers[[3]] = NULL;
+t = removeBackground(t$plot)
+plot(t)
+```
+
+
+## Influence diagnostics
+
+```{r, fig.height=3, out.width="100%"}
+library(gridExtra)
+library(grid)
 p = ols_plot_dfbetas(model, print_plot = F)
+
+grid.arrange(grobs=rbind(rep(c(1,1,1,1),2)), p$plots, ncol=4)
 for (i in 1:length(p$plots)){
-  print(changePlot(p$plots[[i]]))
+  par(mar=c(2,4,2,1))
+  print(removeBackground(changePlot(p$plots[[i]])))
 }
 ```
 
