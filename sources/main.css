@@ -9,7 +9,7 @@ table th { background-color: #0a4d7d !important;}
 pre{ overflow-x: hidden !important;}
 code #code { font-weight: bold} 
 
-/*code{ white-space: pre-wrap !important;}*/
+code{ white-space: pre-wrap !important;}
 
 ul {list-style: decimal; color: #0a4d7d;}
 ul ul {list-style: lower-alpha;}
