@@ -484,48 +484,44 @@ We show below the estimates and significance test for the variables that are inc
 summary(model)
 ```
 
-<b style="color: red">
-The variable <i>Weight</i>, <i>Jumping</i> and <i>Preferred_Foot</i> seem to be not significant at level <code id="code">0.05</code>. This means that for these 3 variables, we can not reject the null hypothesis that the corresponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from <i>Strength</i> and <i>Marking</i>. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. However, marking and strength abilities seem to lower the salary, and we can not think of an explanation for that phenomenon. We can now take a look more precisely at our qualitative variables (<i>Nationality</i> and <i>Preferred_Foot</i>). We see that the fact to be left-footed raise on average your salary by 1000\$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the <i>Nationality</i> variable, the Asian Nationality 
-improve your salary by 1300\$ (on average), the African Nationality by 1100\$ and the European Nationality by 1100. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
-</b>
+All our coefficients are significant at a $alpha$−level 0.01. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from <i>NationalityAmerica</i> and the intercept. In fact, beeing American seem to lower your salary by 890\$. Being Asian, conversely, increases your wage by 1200\$. An explantion for that could be that rising clubs in country like Qatar or Saudi Arabia recruits manly asian players, and pay them well. The explanation for the coefficient of <i>NationalityAmerica</i> could be that South American players are more keen to accept lwer salaries, since these countries have lower income level on average.
+
 
 
 
 # Coefficient Linear Combination
 
-We will now test if a linear combination of our coeficients holds. We are interested in the effect of the <i>Overall</i> variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis :
+We will now test if a linear combination of our coeficients holds. We are interested in the effect of the <i>Overall</i> variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player mindset characteristics. We will therefore test the following hypothesis :
 <b style="color: red">
 \[H_0 : \beta_{Overall} 
-\\= \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
-\beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
+\\= \frac{\beta_{Reactions}+\beta_{Composure}{2} \]
 </b>
 
 ```{r ,eval=F}
-# TODO 
 library(car)
-hyp = c(0, -8, 1, 0, 1, 1, 1, 1 , 1, 1, 1, 0, 0, 0, 0, 0)
+hyp = c( 0, 0, −2, 1, 1, 0, 0)
 linearHypothesis(model, hypothesis.matrix = hyp)
 
 ```
 
-We see in the table above that we can reject the restricted model (i.e. the model under $H_0$). We can conclude that the effect of the <i>Overall</i> variable is not equal to the mean of the effect of the players abilities. 
+We see in the table above that we can reject the restricted model (i.e. the model under $H_0$). We can conclude that the effect of the <i>Overall</i> variable is not equal to the mean of the effect of the players mindset characteristics. 
 
 
 # Test of nullity of a subset of coefficients
 
-We would like to see if we can simplify our model a bit to a restricted model. For that, we will check if we can say that some of the $\beta_j$ (actually, the ones that we have previously suspected to be non significant) are simultaneously equal to 0.
+We would like to see if we can simplify our model a bit to a restricted model. For that, we will check if we can say that some of the $\beta_j$ (actually, the ones of <i>Reaction</i> and <i>Composure</i>) are simultaneously equal to 0. We want to test them because we suspect that their role is not crucial to determine the salary of the player.
 Our test statistic is 
 \[\frac{(SSE_0 - SSE)/q}{SSE/(n-p)} \sim F_{q, n-p} \]
 The idea behind this test is that under $H_0$, $SSE$ and $SSE_0$ should be close. We will therefore reject $H_0$ if the statistic is beyond a critical value (for a $F_{q, n-p}$ distribution).
 
 ```{r, eval=F}
-linearHypothesis(model, c("Jumping=0", "Weight=0", "Preferred_FootLeft=0"))
+linearHypothesis(model, c("Reactions=0", "Composure=0"))
 ```
 
 In the result table above, we look at the following null hypothesis :
-\[H_0 : \beta_{Jumping}=\beta_{Weight}=\beta_{Preferred\_FootLeft}=0\]
+\[H_0 : \beta_{Reactions}=\beta_{Composure}=0\]
 
-We see that we have a p-value of <code id="code">0.04</code> for this F-test. That is, we reject the null hypothesis if we choose a confidence level of 0.05, but not if the level is 0.01. Since we have worked with a p-value of 0.05 since the beginning, we can reject $H_0$. So we reject the assertion that $\beta_{Jumping}$, $\beta_{Weight}$ and $\beta_{Preferred\_FootLeft}$ are null simultaneously.
+We see that we have a p-value of <code id="code">0.0008</code> for this F-test. Therefore, at our nominal level, we can reject $H_0$. So we reject the assertion that $\beta_{Reactions}$ and $\beta_{Composure}$ are null simultaneously. It seems that the behaviour of the player has then an impact on its wage. Maybe, club managers want players to be exemplary to give a good impression of the club.
 
 
 # Predictions
@@ -554,11 +550,11 @@ We can see above the actual values of the <i>Wage</i> variable of the validation
 
 # Conclusion
 
-Our main goal was to make football managers know the wage they have to pay their players, in order to be around the average of what other clubs do. That is a useful information because it could be a precious help to the club accounting. We started by selecting the variables that would compose our model. We did that using several methods of selection (AIC-stepwise, LASSO). We also checked if we had better goodness of fit criteria by taking the log of the response variable, and that was the case. We selected a model that was not too complicated but that had still a good fit to the training data. It was the AIC-stepwise model. We were not surprised to see that the value of the player was significant. In fact, the value of the player is one of the variables that help the most to predict his wage. Unsurprisingly, some game characteristics play a role too. 
+Our main goal was to make football managers know the wage they have to pay their players, in order to be around the average of what other clubs do. That is a useful information because it could be a precious help to the club accounting. We started by selecting the variables that would compose our model. We did that using several methods of selection (AIC-stepwise, LASSO). We also checked if we had better goodness of fit criteria by taking the log of the response variable, and that was the case. We selected a model that was not too complicated but that had still a good fit to the training data. It was the LASSO model. We were not surprised to see that the value of the player was significant. In fact, the value of the player is one of the variables that help the most to predict his wage. Unsurprisingly, some game characteristics play a role too. 
 
-We then tested some hypotheses on our selected model. We saw that we have nonlinearities, heteroskedasticity and non normality of the error term. We tried to take remedial actions against that but we think that the nonlinear relation in the true model is very complicated, since we did not manage to improve the model with simple analytic transformations of our variables. We saw that we have some outliers and influential observations, but not so much in comparison to the size of the dataset. Of course we did not delete them because this phenomenon might hide the lack of an important explanatory variable, such as player popularity, for example. We tried then some linear hypotheses, but we had to reject all of them.
+We then tested some hypotheses on our selected model. We saw that we have approximate multicollinearity, nonlinearities, heteroskedasticity and non normality of the error term. We tried to take remedial actions against that but we think that the nonlinear relation in the true model is very complicated, since we did not manage to improve the model with simple analytic transformations of our variables. We saw that we have some outliers and influential observations, but not so much in comparison to the size of the dataset. Of course we did not delete them because this phenomenon might hide the lack of an important explanatory variable, such as player popularity, for example. We tried then some linear hypotheses, but we had to reject all of them.
 
-Finally, and maybe the most important part of the project, the prediction. Unfortunately, we have a severe drawback of our model for this section, our model has very bad predictive power. Our prediction intervals only cover the true value observed in the validation dataset only in 5% of the cases... 
+Finally, and maybe the most important part of the project, the prediction. Unfortunately, we have a severe drawback of our model for this section, our model has very bad predictive power. Our prediction intervals only cover the true value observed in the validation dataset only in 3.3% of the cases... 
 
 As a conclusion, we could say that this project was very interesting because it was a dive into a realistic practical problem. 
 Furthermore, the fail to predict correctly our response variables with linear models pushes us to learn more about other regression techniques, and therefore diversify our statistics advanced techniques. 
@@ -600,6 +596,7 @@ plot(t)
 
 ## Influence diagnostics
 
+
 ```{r, fig.height=3, out.width="100%", eval=F}
 library(gridExtra)
 library(grid)
@@ -610,6 +607,7 @@ for (i in 1:length(p$plots)){
   par(mar=c(2,4,2,1))
   print(removeBackground(changePlot(p$plots[[i]])))
 }
+
 ```
 
 
