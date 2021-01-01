@@ -125,6 +125,8 @@ draw.hist.boxplots(
 
 Similarly from the \textit{Wage} variable, we see in the table that the value of the player is also right-skewed and very thick in its tails. The histogram/boxplot figure of the \textit{Value} variable above confirms this tendency.
 
+We can see in the histograms above that, if we take the log of these two variables (<i>Wage and <Value>), we obtain much more suitable distributions. The <Wage> distribution is less agglutinated near zero, and the <Value> distribution seems even normally distributed.
+
 Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around <code style="font-weight:bold">`r 181`cm</code> and <code style="font-weight:bold">`r 75`kg</code>, respectively.
 
 The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3.
@@ -137,7 +139,7 @@ library(corrplot)
 corrplot(cor(dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
-We have here the upper part of the correlation matrix. We see that all variables in the bottom right have very high pairwise correlations (lots of those correlations are even superior to <code style="font-weight:bold">`r 0.8`</code>). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the \textit{Overall} variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
+We have here the upper part of the correlation matrix. We see that we have a triangle of variables that have very high pairwise correlations (lots of those correlations are even superior to <code style="font-weight:bold">`r 0.8`</code>). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the \textit{Overall} variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
 
 After this suppression, we see that the following correlation matrix is better, in the sense that we have no longer blocks of high correlated variables. 
 
