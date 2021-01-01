@@ -596,7 +596,7 @@ We then tested some hypotheses on our selected model. We saw that we have nonlin
 
 Finally, and maybe the most important part of the project, the prediction. Unfortunately, we have a severe drawback of our model for this section, our model has very bad predictive power. Our prediction intervals only cover the true value observed in the validation dataset only in 5% of the cases ... 
 
-As a conlusion, we could say that this project was very interesting because it was a dive into a realistic practical problem. 
+As a conclusion, we could say that this project was very interesting because it was a dive into a realistic practical problem. 
 Furthermore, the fail to predict correctly our response variables with linear models pushes us to learn more about other regression techniques, and therefore diversify our statistics advanced techniques. 
 
 
