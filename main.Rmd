@@ -71,7 +71,7 @@ dummies = data.frame(model.matrix(~ Nationality - 1, data=original),
 dataset = within(original, {
   Weight  = round(as.numeric(Weight*0.453592))
   Height = round(sapply(Height, function(x) 
-    as.numeric(strsplit(x, "'")[[1]][1])*12 + as.numeric(strsplit(x, "'")[[1]][2])*2.54))
+    (as.numeric(strsplit(x, "'")[[1]][1])*12 + as.numeric(strsplit(x, "'")[[1]][2]))*2.54))
   
   Value = Value_M #* 10^6
   Wage = Wage_K #* 1000
@@ -194,18 +194,18 @@ We will use a stepwise function that finds a model that minimizes AIC, using a s
 ```{r model_selection stepwise}
 # Stepwise AIC 
 
-aic.mass = stepAIC(model.complete, direction = "both", trace = F)
-formula.aic = as.formula(paste0("Wage ~ ", paste(names(aic.mass$coefficients)[-1:0], collapse=" + ")))
+model.aic = stepAIC(model.complete, direction = "both", trace = F)
+#formula.aic = as.formula(paste0("Wage ~ ", paste(names(aic.mass$coefficients)[-1:0], collapse=" + ")))
 
 
 # Stepwise AIC log(Y)
 
-aic.masslogy = stepAIC(model.complete.logy, direction = "both", trace = F)
-formula.aiclogy = as.formula(paste0("log(Wage) ~ ", paste(names(aic.masslogy$coefficients)[-1:0], collapse=" + ")))
+model.aiclogy = stepAIC(model.complete.logy, direction = "both", trace = F)
+#formula.aiclogy = as.formula(paste0("log(Wage) ~ ", paste(names(aic.masslogy$coefficients)[-1:0], collapse=" + ")))
 
 
-model.aic = lm(formula.aic, data = train)
-model.aiclogy = lm(formula.aiclogy, data = train)
+#model.aic = lm(formula.aic, data = train)
+#model.aiclogy = lm(formula.aiclogy, data = train)
 
 models.comparison = addComparison(model.aic, "Stepwise AIC")
 models.comparison = addComparison(model.aiclogy, "Stepwise AIC log(Y)")
@@ -221,10 +221,10 @@ Indeed, for a certain coefficient t>0 to be determined, we impose that \[ \sum_{
 
 ```{r}
 #lasso
-lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = train$Wage, family = "gaussian", alpha = 1)
-lasso.coef = coef(lasso.cv, s="lambda.min")
+lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = train$Wage, family = "gaussian", alpha=1)
+lasso.coef = coef(lasso.cv, 0.5661)
 
-formula.lasso = as.formula(paste0("Wage ~ ", paste(rownames(lasso.coef)[-1:0], collapse=" + ")))
+formula.lasso = as.formula(paste0("Wage ~ ", paste(rownames(lasso.coef)[which(abs(lasso.coef) > 0)][0:-1], collapse=" + ")))
 model.lasso = lm(formula.lasso, data=train)
 
 models.comparison = addComparison(model.lasso, "Lasso")
@@ -232,9 +232,9 @@ models.comparison = addComparison(model.lasso, "Lasso")
 
 #lasso log(Y)
 lasso.cvlogy = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = log(train$Wage), family = "gaussian", alpha = 1)
-lasso.coeflogy = coef(lasso.cvlogy, s="lambda.min")
+lasso.coeflogy = coef(lasso.cvlogy, 0.04641)
 
-formula.lassology = as.formula(paste0("log(Wage) ~ ", paste(rownames(lasso.coeflogy)[-1:0], collapse=" + ")))
+formula.lassology = as.formula(paste0("log(Wage) ~ ", paste(rownames(lasso.coeflogy)[which(abs(lasso.coeflogy) > 0)][0:-1], collapse=" + ")))
 model.lassology = lm(formula.lassology, data=train)
 
 models.comparison = addComparison(model.lassology, "Lasso log(Y)")
@@ -389,7 +389,7 @@ We will use the Variance Inflation Factors (VIF) to determine if there is multic
 
 ```{r}
 p = ols_vif_tol(model)
-formattable(p)
+formattable(p, align=c("l", "c", "c"))
 ```
 
 We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of <code style="font-weight:bold">2.44</code>. Since it is not extremely far from one, we decide not to do a Ridge Regression, indeed it seems not necessary so far.
@@ -548,8 +548,8 @@ draw.hist.boxplots(data.frame(dataset,  Wage.log=log(dataset$Wage), Value.log=lo
 
 ```{r}
 # Stepwise AIC 
-aic.mass
-aic.masslogy
+model.aic
+model.aiclogy
 ```
 
 ## Influence diagnostics
