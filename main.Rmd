@@ -1,7 +1,7 @@
 ---
-title: "LSTAT2120 - Linear Project"
-author: "Lamy Lionel, Aurèle Bartolomeo, Rémi Gengler"
-date: "26/12/2020"
+title: "Linear Models (LSTAT2120) - Project"
+author: "Bartolomeo Aurèle, Gengler Rémi, Lamy Lionel"
+date: "January 2021"
 output:
   prettydoc::html_pretty:
     css: sources/main.css
@@ -11,8 +11,9 @@ output:
     toc_depth: 3
     fig_caption: yes
     number_sections: no
-  html_document: default
+  pdf_document: default
   rmarkdown::html_document: default
+  html_document: default
 ---
 
 ```{r global.options, include=F}
@@ -21,8 +22,9 @@ knitr::opts_chunk$set(
   echo = F,
   eval=T,	
   	
-  warnings=F,	
-  message=F,	
+  warning=F,	
+  message=F,
+  
   	
   out.width= "80%",	
   fig.align = "center",	
@@ -34,41 +36,25 @@ rmarkdown::html_document(df_print = "formattable")
 
 ```{r options}
 opt.digits = 3
-opt.barcolor = "#0a4d7d"
+opt.barcolor = "blue" #"#0a4d7d"
 ```
 
 ```{r utils}
-models.comparison = data.frame()
-
-addComparison = function(model, model_name){
-  to_combine = data.frame(
-      LogLik = ifelse(is.null(logLik(model)[1]), yes=NA, no=round(logLik(model)[1], opt.digits)),
-      AIC = round(AIC(model), opt.digits),
-      #BIC = round(BIC(model), opt.digits),
-      R2 = round(summary(model)$r.squared, opt.digits),
-      Adjusted.R2 = round(summary(model)$adj.r.squared, opt.digits),
-      Deviance = ifelse(is.null(deviance(model)), yes=NA, no=round(deviance(model), opt.digits)),
-      #Deviance.custom = cost_deviance(base_train_freq$Frequency, model$fitted),
-      row.names = as.character(model_name)
-  )
-  rbind(
-    models.comparison,
-    to_combine
-  )
-}
+source("./sources/utils.R")
+source("./sources/descriptive.R")
 ```
 
-# Intro and objective
+# Introduction and objective
 
-For this project, we will use a dataset that contains all the FIFA 19 player characteristics (FIFA is a football simulation video game, and our dataset come from the 2019's edition). This dataset contains 18059 observations (all the different players created in the game) and 34 variables (characteristics such as Age, Nationality, Wage, Stamina, ...). 
+For this project, we will use a dataset that contains all the FIFA 19 player characteristics (FIFA is a football simulation video game, and our dataset come from the 2019's edition). This dataset contains <code style="font-weight:bold">18059</code> observations (all the different players created in the game) and <code style="font-weight:bold">`r 34`</code> variables (characteristics such as Age, Nationality, Wage, Stamina, ...). 
 
 The purpose of our project is to predict the wage of a player based on all his features. This is a very interesting question because it could help club managers to know if some of their players are being underpaid (that would push the player to leave) or overpaid (that could be a threat to club finances). It could also help recruiters to have an idea of the price to pay for a player, depending on the features he is looking for. Finally, it would be a helpful tool for young players, for example to know on which feature they have to work in order to have their wage increased.
 
-For this purpose we will use linear models only. So for a start we will look more precisely at our dataset and see if the classical assumptions for linear models are respected. We will also check for nonlinearity, influential observations, multicollinearity, heteroskedasticity and autocorrelation. All these concepts will be reexplained in the appropriate section. If some hypotheses seem clearly not satisfied, we will then take remedial actions. We will retain different models based on several regression methods seen in course and will compare them based on robust criterions (for example, their ability to predict correctly th value of the wage for a completely new player).
+For this purpose we will use linear models only. So for a start we will look more precisely at our dataset and see if the classical assumptions for linear models are respected. We will also check for nonlinearity, influential observations, multicollinearity, heteroskedasticity and autocorrelation. All these concepts will be reexplained in the appropriate section. If some hypotheses seem clearly not satisfied, we will then take remedial actions. We will retain different models based on several regression methods seen in course and will compare them based on robust criterions (for example, their ability to predict correctly the value of the wage for a completely new player).
 
 # Data cleaning and separtion of the dataset
 
-We start by doing a complete case analysis (i.e eliminating all observations that contain missing values). We can do that without intoducing any bias in our analysis, because observations containing missing values constitute an extremely small portion of our dataset (48 of 18207 observations, so less than 0.3%). We than improve the usability of the dataset by changing some units. Initially, the variable Nationality (that recorded the nationality of the player) was encoded as the country of the player, but there were then too much levels and some of them seemed to be irrelevant, so we decided to modify it manually and replace these levels by the associated continents.
+We start by doing a complete case analysis (i.e. eliminating all observations that contain missing values). We can do that without introducing any bias in our analysis, because observations containing missing values constitute an extremely small portion of our dataset (48 of 18207 observations, so less than <code style="font-weight:bold">`r 0.3`%</code>). We then improve the usability of the dataset by changing some units. Initially, the variable \textit{Nationality} that records the nationality of the player was encoded as the country of the player. Since there were too much levels and some of them seemed to be irrelevant, we decided to modify it manually and replace these levels by the associated continents.
 Finally, we separate randomly 20% of our observations. These observations will be used for prediction, but not for model estimation. 
 
 ```{r data_setup}
@@ -85,7 +71,7 @@ dummies = data.frame(model.matrix(~ Nationality - 1, data=original),
 dataset = within(original, {
   Weight  = round(as.numeric(Weight*0.453592))
   Height = round(sapply(Height, function(x) 
-    as.numeric(strsplit(x, "'")[[1]][1])*12 + as.numeric(strsplit(x, "'")[[1]][2])*2.54))
+    (as.numeric(strsplit(x, "'")[[1]][1])*12 + as.numeric(strsplit(x, "'")[[1]][2]))*2.54))
   
   Value = Value_M #* 10^6
   Wage = Wage_K #* 1000
@@ -100,92 +86,49 @@ dataset = within(original, {
 
 # Descriptive analysis
 
-Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in Euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in Euros). We should also emphasize the fact that we have two categorical variables called Preferred Foot (with two levels : Left and Right) and Nationality (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplot. We see that more than half of the players are europeean, while the 4 other continents don't exceed 25% individually. We also observe that players that are right-footed are almost four times more than left-footed players.
+Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in thousands of euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in million euros). We should also emphasize the fact that we have two categorical variables called \textit{Preferred_Foot} (with two levels : Left and Right) and \textit{Nationality} (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corrisponding barplots.
 
 ```{r descriptive, out.width="80%"}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
-barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
-
-# Mean, Sd, Skewness, Kurtosis
-library(moments)
-library(formattable) # Better print
-library(ggplot2)
-library(gridExtra)
-
-desc.quantitative = (function(data){
-  
-  addStats = function(col, name){
-    
-    return(data.frame(
-      Variable=name,
-      Mean = round(mean(col, na.rm = T), opt.digits),
-      Std.Deviation = round(sd(col), opt.digits),
-      Skewness = round(skewness(col), opt.digits),
-      Kurtosis = round(kurtosis(col), opt.digits)
-      ))
-  }
-  
-  for (c in colnames(data)){
-    if (exists("results")){
-      results = rbind(results, addStats(data[[c]], c))
-    }else{
-      results = addStats(data[[c]], c)
-    }
-  }
-  return (results)
-   
-})(dataset)
-
-desc.quantitative.order = order(as.character(desc.quantitative$Variable))
-desc.quantitative = desc.quantitative[desc.quantitative.order,]
-row.names(desc.quantitative) = NULL # hide row number
-
-formattable(desc.quantitative,
-            align=c("l", rep("c", ncol(desc.quantitative)-1))
-            #,list(Skewness = formatter("span", style = x ~ style(color= ifelse(abs(x) > 0.5, ifelse(abs(x) >= 2,"red", "orange"), "black"))))
-            )
+barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 ```
 
+We observe that right-footed players are four times as many as left-footed players. We also see that more than half of the players are European, while the 4 other continents don't exceed 25% individually. 
+
+
+Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this table since we have a lot of variables, but we will try to outline the most important ones. 
+
+
+```{r descriptive table, out.width="80%"}
+
+desc.quantitative = compute.desc.quantitative(dataset)
+
+formattable(desc.quantitative, align=c("l", rep("c", ncol(desc.quantitative)-1)))
+```
+
+Let's start with the \textit{Age} variable. Players age have mean <code style="font-weight:bold">25</code>, with a <code style="font-weight:bold">`r 4.7`</code> standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is slightly less than 3, which means that the variable is maybe a bit light-tailed. 
+
+Now we can look at our variable of interest, the wage. It seems that it is not at all following a normal distribution. In fact, we have a a skewness of <code style="font-weight:bold">`r 7.9`</code> which means that it is very right-tailed. Furthermore, it has a kurtosis of <code style="font-weight:bold">102</code> so the \textit{Wage} variable is extremely thick in the tails. We can back up this claim by looking at the histogram and boxplot of the wage. This variable is definitely not normal.
 
 ```{r descriptive_graph, out.width="100%", fig.height=1.8}
 # Boxplot and Histogram
 
-desc.quantitative.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
-  
-  
-  layout(mat=matrix(seq(nrow*ncol*2), 2*nrow, 1*ncol, byrow=F), heights = rep(c(4,1.5), ncol))
-  drawPlots = function(coname){
-    
-    par(mar=c(0, 2, 2, 2))
-    hist(data[[coname]], axes=T, main=coname, col = opt.barcolor, xlab="", ylab="Count", xaxt="n")
-    par(mar=c(3, 2.3, 0, 2.3))
-    boxplot(data[[coname]], horizontal = T, frame=boxframe)
-    
-  }
-  
-  invisible(sapply(colnames(data), function (x) drawPlots(x)))
-  
-}
-
-desc.quantitative.boxplots(data.frame(dataset, Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
-                           1, 4, T)
+draw.hist.boxplots(
+  data.frame(Wage=dataset$Wage, Value=dataset$Value,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
+  1, 4, TRUE
+)
   
 ```
 
-Now we can take a look at the table that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this Table since we have a lot of variables, but we will try to outline the most important ones. 
+Similarly from the \textit{Wage} variable, we see in the table that the value of the player is also right-skewed and very thick in its tails. The histogram/boxplot figure of the \textit{Value} variable above confirms this tendency.
 
-Let's start with the Age variable. Players age have mean 25, with a 4.7 standard deviation. We see that the variable is skewed right (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is a bit negative (recall that in SAS, a normal distribution has kurtosis 0, not 3), that means that the variable is maybe a bit light-tailed. 
+Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around <code style="font-weight:bold">`r 181`cm</code> and <code style="font-weight:bold">`r 75`kg</code>, respectively.
 
-Now we can look at our variable of interest, the wage. It seems that it is not at all following a normal distribution. In fact, we have a a skewness of 7.8 which means that it is very right-tailed. Furthermore, it has a kurtosis of 103 so the wage variable is extremely thick in the tails. We can back up this claim by looking at the histogram and boxplot of the wage. This variable is definitely not normal.
+The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3.
 
-Similarly from the wage variable, we see that the value of the player is also right-skewed and very thick in its tails. Again, we can look at the histogral/bowplot figure of the value variable and we confirm this tendency.
-
-Weight and height of the players seem to be normally distributed (maybe a bit right-skewed for the weight) around 181 cm and 75 kg, respectively.
-
-The remaining variables are all about players abilities. Like we have already said, these variables take values between 0 and 100. We will not describe each of them specifically, since they are all quite similar. In general, they have mean between 45 and 65 and standard deviation between 10 and 20. In addition, they have skewness near 0 and kurtosis near 3. 
 
 We now look at the correlation matrix. The aim of this step is to detect high pairwise correlations (and therefore multicollinearity). Note that even if there were no pairwise correlations, it would not mean that there is no multicollinearity. In fact, there can be multicollinearity invisible in the correlation matrix because multicollinearity can come frome linear dependance between 3 or more variables.
 
@@ -194,22 +137,26 @@ library(corrplot)
 corrplot(cor(dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
-We have here the upper part of the correlation matrix. We see that all variables in the bottom right have very high pairwise correlations (lots of those correlations are even superior to 0.8). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the overall variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
+We have here the upper part of the correlation matrix. We see that all variables in the bottom right have very high pairwise correlations (lots of those correlations are even superior to <code style="font-weight:bold">`r 0.8`</code>). We are not very surprised of that, because we could expect that good players have globally good abilities and conversely, bad players have on average bad abilities. Thus, those variables contains almost the same information as what we already have in the \textit{Overall} variable. Considering this fact, we decided to discard those variables in order to avoid too much multicollinearity problems. 
 
 After this suppression, we see that the following correlation matrix is better, in the sense that we have no longer blocks of high correlated variables. 
 
 ```{r min_corrplot}
 # Suppression/merge of correlated variables
 clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
+
+# Est-ce qu'on met la Value en log ? 
+# clean_dataset$Value = log(clean_dataset$Value)
+
 corrplot(cor(clean_dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 ```
 
-Again, this does not mean that we have no multicollinearity at all. We will look at that before model selction in the next section, with more sophisticated tools. 
+Again, this does not mean that we have no multicollinearity at all. We will look after the model selection, with more sophisticated tools. 
 
 
 # Model Selection
 
-We will now start to select variables to include in our model. We will use the two following types of model selction : a stepwise selection using AIC and a LASSO procedure. 
+We will now start to select variables to include in our model. We will use the two following types of model selection : a stepwise regression using Akaike information criterion (AIC) and a LASSO procedure. 
 
 ```{r}
 library(olsrr)
@@ -226,15 +173,13 @@ valid = cbind(clean_dataset[-tmp,], dummies[-tmp,])
 
 rm(tmp)
 
+
+# ---
 formula.complete = as.formula("Wage ~ .")
 formula.complete.logy = as.formula("log(Wage) ~ .")
 
-formula.without = as.formula("Wage ~ . - Value")
-
 model.complete = lm(formula.complete, data=train)
 model.complete.logy = lm(formula.complete.logy, data=train)
-
-model.without = lm(formula.without, data=train)
 
 models.comparison = addComparison(model.complete, "Complete")
 models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
@@ -244,118 +189,109 @@ models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 
 ## Stepwise Regression using AIC
 
-We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise selection. The method will check wheter the AIC keeps decreasing while we include more and more variables. 
-
+We will use a stepwise function that finds a model that minimizes AIC, using a step-by-step approach. As a reminder, the AIC, just like the adjusted R-squared, is a measure of the quality of the model that penalizes the addition of new variables. This is what we need in order to do a stepwise regression. The method will check whether the AIC keeps decreasing while we include more and more variables. 
 
 ```{r model_selection stepwise}
 # Stepwise AIC 
-aic.mass = stepAIC(model.complete, direction = "both", trace = F)
-aic.mass
 
-formula.aic = as.formula("Wage ~ Age + Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Strength + Interceptions + Value + NationalityAmerica")
+model.aic = stepAIC(model.complete, direction = "both", trace = F)
+#formula.aic = as.formula(paste0("Wage ~ ", paste(names(aic.mass$coefficients)[-1:0], collapse=" + ")))
 
-
-models.comparison = addComparison(lm(formula.aic, data = train), "Stepwise AIC")
 
 # Stepwise AIC log(Y)
-aic.masslogy = stepAIC(model.complete.logy, direction = "both", trace = F)
-aic.masslogy
 
-formula.aiclogy = as.formula("log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft")
+model.aiclogy = stepAIC(model.complete.logy, direction = "both", trace = F)
+#formula.aiclogy = as.formula(paste0("log(Wage) ~ ", paste(names(aic.masslogy$coefficients)[-1:0], collapse=" + ")))
 
 
-models.comparison = addComparison(lm(formula.aiclogy, data = train), "Stepwise AIC log(Y)")
+#model.aic = lm(formula.aic, data = train)
+#model.aiclogy = lm(formula.aiclogy, data = train)
+
+models.comparison = addComparison(model.aic, "Stepwise AIC")
+models.comparison = addComparison(model.aiclogy, "Stepwise AIC log(Y)")
 ```
 
-In the stepwise summary above we see that the selection discards 6 variables : Age, Height, Weight, Jumping
+In the stepwise summary in the appendix we see that the selection discards 6 variables : \textit{Age}, \textit{Height}, \textit{Weight}, \textit{Jumping}, \textit{Marking} and \textit{Strength}.  
 
 ## LASSO Procedure
 
-The LASSO estimator is comprable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter $\beta$.
-Indeed, for a certain coefficient t>0 to be determined, we impose that \[ \sum_{j=1}^{p} |\beta_j| \leq t \].
+The LASSO estimator is comparable to the OLS in the sense that the goal is to minimize the sum of squared residuals. But the main difference lies in the fact that it imposes a constraint on the L1 norm of the model parameter $\beta$.
+Indeed, for a certain coefficient t>0 to be determined, we impose that \[ \sum_{j=1}^{p} |\beta_j| \leq t \] We can see the results in the appendix.
 
 
 ```{r}
 #lasso
-lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = train$Wage, family = "gaussian", alpha = 1)
-lasso.coef = coef(lasso.cv, s="lambda.min")
+lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = train$Wage, family = "gaussian", alpha=1)
+lasso.coef = coef(lasso.cv, 0.5661)
 
-formula.lasso = as.formula("Wage ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Interceptions + Composure + Marking + Value + NationalityAfrica + NationalityAmerica + NationalityEurope + NationalityOceania + Preferred_FootLeft")
+formula.lasso = as.formula(paste0("Wage ~ ", paste(rownames(lasso.coef)[which(abs(lasso.coef) > 0)][0:-1], collapse=" + ")))
 model.lasso = lm(formula.lasso, data=train)
 
 models.comparison = addComparison(model.lasso, "Lasso")
 
 
-
 #lasso log(Y)
 lasso.cvlogy = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = log(train$Wage), family = "gaussian", alpha = 1)
-lasso.coeflogy = coef(lasso.cvlogy, s="lambda.min")
+lasso.coeflogy = coef(lasso.cvlogy, 0.04641)
 
-formula.lassology = as.formula("log(Wage) ~ Age + Overall + Potential + Height + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Aggression + Composure + Marking + Value + NationalityAfrica + NationalityAmerica +  NationalityAsia + NationalityEurope + NationalityOceania + Preferred_FootLeft + Preferred_FootRight")
+formula.lassology = as.formula(paste0("log(Wage) ~ ", paste(rownames(lasso.coeflogy)[which(abs(lasso.coeflogy) > 0)][0:-1], collapse=" + ")))
 model.lassology = lm(formula.lassology, data=train)
 
 models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 ```
 
 ## Final Model (without interactions)
-We have now looked at 6 differents models. The complete regression model, the AIC-stepwise regression model and the lasso regression model. For each of them, we have estimated a model of regression against tha wage variable and against the log_wage variable. We have done that because we suspected non linear relations in our model. 
+We have now looked at 6 different models : the complete regression model (two kinds), the AIC-stepwise regression model (two kinds) and the LASSO regression model (two kinds). Indeed, for each of them, we have estimated a model of regression against the \textit{Wage} variable and against the \textit{log_wage} variable. We have done that because we suspected non linear relations in our model. 
 ```{r}
-models.comparison
+formattable(models.comparison, list(
+  formattable::area(row=4) ~ formatter("span", style= ~ style(font.weight="bold"))
+)) 
 ```
 
-The table above show a model comparison for those 6 models. We use various criteria such as the loglikelihhod, the AIC, the adjusted R-squared and the deviance. We see that the R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression).
-
+The table above shows a model comparison for those 6 models. We use various criteria such as the log-likelihood, the AIC, the adjusted R-squared and the deviance. We see that the adjusted R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model with log of the \textit{Wage} variable because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression). The final is then given by \[\log{Wage} = -7.96 + 0.11 Overall + 0.018Potential + 0.0021Weight + 0.005HeadingAccuracy + 0.0034Reactions \\ - 0.0008Jumping - 0.0035Strength + 0.002Aggression + 0.0018Composure - 0.003 Marking + 0.028Value \\ + 0.104NationalityAfrica + 0.284NationalityAsia + 0.117NationalityEurope + 0.021Preferred\_FootLeft\]
+where \textit{NationalityAfrica}, \textit{NationalityAsia}, \textit{NationalityEurope} and \textit{Preferred_FootLeft} are dummy variables.
 ```{r}
 #setting the final model (aic logy)
-model = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft, data = train)
+model = model.aiclogy
+  
+# lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + Reactions + Jumping + Strength + Aggression + Composure + Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + Preferred_FootLeft, data = train)
 
 ```
 
 ## Interactions
 
-We will test the interaction between the preferred foot and the marking variable.
+We test different possible interactions in the following : we add each time an interaction term in the basis model (final model) and then look at the properties of the new model. The first model with interaction contains an interaction term between the \textit{Preferred_FootLeft} variable and the \textit{Marking} variable. We then consider interaction between \textit{Preferred_FootLeft} and \textit{Value} (Model 2 with interaction), interaction between \textit{NationalityEurope} and \textit{Potential} (Model 3 with interaction) and interaction between \textit{NationalityAfrica} and \textit{Value} (Model 4 with interaction).
 
 ```{r}
-model.interaction1 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft + Preferred_FootLeft * Marking, data = train)
-model.interaction2 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft + Preferred_FootLeft * Value, data = train)
-model.interaction3 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft + NationalityEurope * Potential, data = train)
-model.interaction4 = lm(log(Wage) ~ Overall + Potential + Weight + HeadingAccuracy + 
-    Reactions + Jumping + Strength + Aggression + Composure + 
-    Marking + Value + NationalityAfrica + NationalityAsia + NationalityEurope + 
-    Preferred_FootLeft + NationalityAfrica * Value, data = train)
+
+formula.model = paste0("log(Wage) ~ ", paste(names(coef(model))[0:-1], collapse=" + "))
+
+model.interaction1 = lm(paste0(formula.model, " + Preferred_FootLeft * Marking"), data = train)
+
+model.interaction2 = lm(paste0(formula.model, " + Preferred_FootLeft * Value"), data = train)
+
+model.interaction3 = lm(paste0(formula.model, " + NationalityEurope * Potential"), data = train)
+
+model.interaction4 = lm(paste0(formula.model, " + NationalityAfrica * Value"), data = train)
+
 models.comparison = data.frame()
 models.comparison = addComparison(model, "Model")
 models.comparison = addComparison(model.interaction1, "Model 1 with interaction")
 models.comparison = addComparison(model.interaction2, "Model 2 with interaction")
 models.comparison = addComparison(model.interaction3, "Model 3 with interaction")
 models.comparison = addComparison(model.interaction4, "Model 4 with interaction")
+formattable(models.comparison)
 ```
 
-In the comparative table above, we see that the interactions we are testing does not improve a lot our criteria of goodness of fit : it is possible to get an AIC and an adjusted R-square slightly better than in the basis model (that's the case when we consider the interaction between \textit{NationalityEurope} and \textit{Potential}) but this difference isn't so much considerable. Adjusted R-squared only reaches 0.68 at best instead of 0.679 in the model without interactions and R-squared remains constant for the different tested models. Therefore we will working with the model without any interaction.
+In the comparative table above, we see that the interactions we are testing does not improve a lot our criteria of goodness of fit : it is possible to get an AIC and an adjusted R-square slightly better than in the basis model (that's the case when we consider the interaction between \textit{NationalityEurope} and \textit{Potential}) but this difference isn't so much considerable. Adjusted R-squared only reaches <code style="font-weight:bold">`r 0.68`</code> at best instead of <code style="font-weight:bold">`r 0.679`</code> in the model without interactions and R-squared remains constant for the different tested models. Therefore we will work with the model without any interaction.
 
 # Underlying Hypotheses Testing
 
-We will now check for nonlinearity, outliers (and influential observations), multicollinearity, heteroskedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
+We will now check for nonlinearity, outliers and influential observations, multicollinearity, heteroskedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fulfilled, we will try to take remedial actions.
 
 ## Nonlinearity
 
-We would like to chek wheter it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with j = 1, ..., p-1.  
+We would like to check whether it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with $j = 1, ..., p-1$.  
 
 ```{r}
 #train$Value = log(train$Value)
@@ -367,25 +303,22 @@ for(i in 1:15){
 
 ```
 
-We are looking for non-linear patterns on the above plots of the residuals and, if necessary, take remadial actions to cope with that problem. For example, if we see a quadratic scatterplot, we would be tempted to add a quadratic term for this exmplaining variable. In our scatterplots, we don't see evidence of hidden qudratic relations, altough 
-the scatterplots for the Overall and Value variables tends to show that there is probably a non-linear relation between those terms and our variable of interest. We choose to keep going with the intial model, because the non-linear formula seems to be not straightforward, and therefore we fear to complicate too much the model if we try to deal with it. In addition, recall that we have already taken the log of the wage variable, so we have not so much possibilities remaining.
+We are looking for non-linear patterns on the above plots of the residuals and, if necessary, take remedial actions to cope with that problem. For example, if we see a quadratic scatterplot, we would be tempted to add a quadratic term for this explaining variable. In our scatterplots, we don't see evidence of hidden quadratic relations, although the scatterplots for the \textit{Overall} and \textit{Value} variables tend to show that there is probably a non-linear relation between those terms and our variable of interest. We choose to keep going with the initial model, because the non-linear formula seems to be not straightforward, and therefore we fear to complicate too much the model if we try to deal with it. In addition, recall that we have already taken the log of the \textit{Wage} variable, so we have not so much possibilities remaining.
 
 ## Outliers
 
 We will first check for outliers with respect to X. For that, we calculate the leverages that we can find with the following formula 
-\[h_{ii}=(1, X_{i1}, ..., X_{i,p-1})(X'X)^{-1}(1, X_{i1}, ..., X_{i,p-1})'\].
+\[h_{ii}=(1, X_{i1}, ..., X_{i,p-1})(X'X)^{-1}(1, X_{i1}, ..., X_{i,p-1})'\]
 In fact, they are the elements on the diagonal of the projection matrix $H=X(X'X)^{-1}X'$. Then, we say that the observation $X_i$ is an outlier if $h_{ii} > \frac{2p}{n}$.
 
 ```{r}
-library("matrixcalc")
-
-explanatory = train[,c("Overall", "Potential", "Weight", "HeadingAccuracy", "Reactions", "Jumping", "Strength", "Aggression", "Composure", "Marking", "Value", "NationalityAfrica", "NationalityAsia", "NationalityEurope", "Preferred_FootLeft")]
+explanatory = train[, names(coef(model))[0:-1]]
 
 pn = (1+ncol(explanatory))*2/nrow(explanatory)
 
 mafull = as.matrix(explanatory)
 macross = crossprod(mafull, mafull)
-mainv = matrix.inverse(macross)
+mainv = solve(macross)
 
 hii = sapply(seq(1, nrow(explanatory)), 
   function(i){
@@ -396,10 +329,11 @@ hii = sapply(seq(1, nrow(explanatory)),
 
 outliers_X = length(which(hii > pn))
 ```
-Using the criteria described previously, we obtain 387 outliers with respect to X (about 3% of the players). 
+
+Using the criteria described previously, we obtain <code style="font-weight:bold">`r  outliers_X`</code> outliers with respect to X (about <code style="font-weight:bold">`r round(outliers_X/nrow(explanatory), 3)*100`%</code> of the players). 
 
 Then, we check for outliers with respect to Y (the wage). We say that $Y_i$ is an outlier if 
-\[|d_i^*| > t_{n-p-1; 1-\alpha/2}\], where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\].
+\[|d_i^*| > t_{n-p-1; 1-\alpha/2}\] where \[d_i^*=e_i \Bigg(\frac{n-p-1}{SSE(1-h_{ii})-e_i^2} \Bigg)^{1/2}\]
 
 ```{r}
 
@@ -411,10 +345,10 @@ outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
     return(abs(rStudentModel[i]) > quantileStudent)
   }                        
 ))
-outliers_Y
-ols_plot_resid_stud_fit(model)
+t = ols_plot_resid_stud_fit(model, print_plot = T)
+t$plot$layers[[3]] = NULL;t$plot$layers[[3]] = NULL;
 ```
-Again, our decision rule allows us to measure the number of outliers with respect to Y. We have 611 outliers of that kind out of 14326 players, which is quite low again (about 4%). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
+Again, our decision rule allows us to measure the number of outliers with respect to Y. We have <code style="font-weight:bold">`r outliers_Y`</code> outliers of that kind out of <code style="font-weight:bold">`r nrow(explanatory)`</code> players, which is quite low again (about <code style="font-weight:bold">`r round(outliers_Y/nrow(explanatory), 3)*100`%</code>). Since $t_{14309;0.975} \approx 2$, under our criteria, all the outliers with respect to Y are represented in red on the previous plot. 
 
 We now look at the influential observations for the fitted values. Recall that the i-th observation is influential if $\big|DFFITS_i\big|>2\sqrt{\frac{p}{n}}$, where $DFFITS_i=d_i^*\sqrt{\frac{h_{ii}}{1-h_{ii}}}$. 
 
@@ -428,24 +362,22 @@ DFFITS = sapply(seq(1, nrow(explanatory)),
 
 influential_fitted = length(which(abs(DFFITS) > 2*sqrt((1+ncol(explanatory))/nrow(explanatory))))
 
-influential_fitted
-ols_plot_dffits(model)
+p = ols_plot_dffits(model, print_plot = F)
+
+changePlot(p$plot)
 ```
-We only have 555 influential observations for the fitted values : that's not much again (less than 4% of the players). Since $2\sqrt{\frac{p}{n}} \approx 0.07$ in our case, under our criteria, all the influential observations are represented in red on the previous plot.
+We only have <code style="font-weight:bold">`r influential_fitted`</code> influential observations for the fitted values : that's not much again (less than 4% of the players). Since $2\sqrt{\frac{p}{n}} \approx 0.07$ in our case, under our criteria, all the influential observations are the observations that exceed the thresholds on the previous plot.
 
 
 In addition to that kind of influential observations, we have to consider the influential observations for the regression coefficients. 
 
-```{r}
-ols_plot_dfbetas(model)
-```
 
 The decision rule seen in class asserts that the i-th observation is influential if $\big|DFBETAS_{k,i}\big|>\frac{2}{\sqrt{n}}$, where $DFBETAS_{k,i}=\frac{\hat{\beta}_k-\hat{\beta}_{k(i)}}{\sqrt{MSE_{(i)}c_k}}$ and $c_k=(X'X)_{kk}^{-1}$. In our case, $\frac{2}{\sqrt{n}} \approx 0.02$. Thus, every previous plot corresponds to the coefficient associated with the concerned variable. Then we see that there aren't much influential points for the regression coefficient associated with the \textit{Value} variable whereas the regression coefficient associated with the \textit{Preferred_FootLeft} variable has a lot of influential observations.
 
 To have an overview of all the influential points, we look at the Cooks distance. 
 
 ```{r}
-plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance")
+plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance", pch=21, bg = opt.barcolor)
 abline(h=4/14326, col="red")
 ```
 The Cooks distances are very low (close to 0 for the wide majority). We choose as decision rule that the influential points are the ones for which the Cooks distance $D_i$ is bigger than $\frac{4}{n}$ (threshold represented in red on the previous plot) where $n$ is the number of observations (common criteria). 
@@ -453,30 +385,32 @@ The Cooks distances are very low (close to 0 for the wide majority). We choose a
 
 # Multicollinearity
 
-We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1 (A $VIF_k$ greater than 10 means that the corrisponding $R^2_k$ is larger than 0.9, which is a sign of approximate collinearity). This method, instead of the pairwise correlation matrix that we analysed before, has the advantage to detect also multicollinearity relations involving more than 2 variables.
+We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $VIF_k = \frac{1}{1-R_k^2}$ for $k=1,..., p-1$, where $R_k^2$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than 10 or if the average VIF is considerably larger than 1 (A $VIF_k$ greater than 10 means that the corresponding $R^2_k$ is larger than 0.9, which is a sign of approximate collinearity). This method, instead of the pairwise correlation matrix that we analyzed before, has the advantage to detect also multicollinearity relations involving more than 2 variables.
 
 ```{r}
-ols_vif_tol(model)
+p = ols_vif_tol(model)
+formattable(p, align=c("l", "c", "c"))
 ```
 
-We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of 2.44. Since it is not extremely far from one, we decide not to do a Ridge Regression, indeed it seems not necessary so far.
+We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of <code style="font-weight:bold">2.44</code>. Since it is not extremely far from one, we decide not to take remedial actions such as a Ridge Regression. 
 
 # Heteroskedasticity 
 
-We plot the residuals against the fitted values to consider possible heteroskedasticity. If the variance of the residuals is considerably variable, we discard the hypothesis of homoskedasticity, meaning that there is heteroskedasticity. We can also look at the Breusch-Pagan test to detect heteroskedasticity. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
+Based on the scatter plots of the residuals $e_i$ against $X_{ij}$, with $j = 1, ..., p-1$ in the study of nonlinearity, we can strongly suspect that there is heteroskedasticity. Let's have a look at the scatter plot of the residuals against the fitted values. If the variance of the residuals is considerably variable, we discard the hypothesis of homoskedasticity, meaning that there is heteroskedasticity. 
 
 ```{r}
 #Residuals vs fitted
-plot(model$residuals, model$fitted.values)
+plot(model$residuals, model$fitted.values, xlab="Residuals", ylab="Fitted Values", pch=21, bg=opt.barcolor)
 ```
-It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicate to decide on the sole basis of this graph wheter there is heteroscedasticity, so we decide to do a Breusch-Pagan test.
+It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicated to decide only on basis of this graph whether there is heteroskedasticity, so we decide to do a Breusch-Pagan test. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
+
 
 ```{r}
 ols_test_breusch_pagan(model, rhs = T, multiple=T)
 
 ```
 
-With a p-value of $3.6e^{-174}$, it is perfectly clear that we can reject the null hypothesis of homoscdasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent.
+With a p-value of <code style="font-weight:bold">3.6e-174</code>, it is perfectly clear that we can reject the null hypothesis of homoskedasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent. As a result, we don't really have to consider remedial actions such as the method of weighted least squares and Box-Cox transformation.
 
 
 # Autocorrelation
@@ -504,15 +438,15 @@ qqline(model$residuals, lwd = 2)
 
 ```
 
-Therefore, the points on this graph should follow the straight red line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoreticla values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
-\[JB = \frac{n}{6} \Big[\hat{S^2}+\frac{(\hat\kappa-3)^2}{4}\Big] \sim \chi^2_2\], under $H_0$.
+Therefore, the points on this graph should follow the straight line. We see that this is not the case for the first quantiles, even though it seems to get better and better then. We will do a Jarque-Bera test to take the decision of rejecting normality of the residuals or not. This test compares the coefficients of skewness $S$ and kurtosis $\kappa$ with the theoretical values for a normal distribution. Recall that for a normal distribution, skewness is equal to 0 and kurtosis is equal to 3 (this is our null hypothesis $H_0$). The Jarque-Bera test statistic is then given by 
+\[JB = \frac{n}{6} \Big[\hat{S^2}+\frac{(\hat\kappa-3)^2}{4}\Big] \sim \chi^2_2\] under $H_0$.
 
 ```{r}
 
 jarque.test(model$residuals)
 ```
 
-With the result of the test above, we reject the normality of the error terms. This could be the result of an inadequate model, in fact this could mean that the error is not random. Like we have already said in the non-linearity section, a complicated non-linearity relation could maybe fix this problem, but it would be out of the scope of this project. 
+With the result of the test above, we reject the normality of the error terms. This could be the result of an inadequate model, in fact this could mean that the error is not random. Like we have already said in the nonlinearity section, a complicated nonlinearity relation could maybe fix this problem, but it would be out of the scope of this project. 
 
 
 
@@ -524,14 +458,14 @@ We show below the estimates and significance test for the variables that are inc
 summary(model)
 ```
 
-The variable weight, jumping and PreferredFoot seem to be not significant at level 0.05. This means that for these 3 variables, we can not reject the null hypotheses that the corrisponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from strenght and marking. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. Hwever, marking and strenght abilities seem to lower the salary, and we can not think of an explantion for that phenomenon. We can now take a look more precisely at our qualitative variables (Nationality and PreferredFoot). We see that the fact to be left-footed raise on average your salary by 1000\$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the nationality variable, the Asian Nationality 
-improve your salary by 1300\$ (on average), the African Nationality by 1100\$ and the Europeean Nationality by 1100\$. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
+The variable \textit{Weight}, \textit{Jumping} and \textit{Preferred_Foot} seem to be not significant at level <code style="font-weight:bold">0.05</code>. This means that for these 3 variables, we can not reject the null hypothesis that the corresponding coefficient is null. Therefore, we will abstain ourselves from interpreting those coefficients. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from \textit{Strength} and \textit{Marking}. It seems normal that our continuous variables has a positive sign. Indeed, most of them are outlining player abilities, and it is clear that players who have better capabilities are on average better paid. However, marking and strength abilities seem to lower the salary, and we can not think of an explanation for that phenomenon. We can now take a look more precisely at our qualitative variables (\textit{Nationality} and \textit{Preferred_Foot}). We see that the fact to be left-footed raise on average your salary by 1000\$. Since left-footed players compose only one fifth of all players, managers may want to keep them in the team, and therefore pay them more then the others. For the \textit{Nationality} variable, the Asian Nationality 
+improve your salary by 1300\$ (on average), the African Nationality by 1100\$ and the European Nationality by 1100. We don't see any explication for that, especially for the $\beta_{Asian}$, since they don't have a so big football tradition.
 
 
 
 # Coefficient Linear Combination
 
-We will now test if a linear combination of our coeficients holds. We are interested in the effect of the overall variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis : 
+We will now test if a linear combination of our coeficients holds. We are interested in the effect of the \textit{Overall} variable. The objective will be to see if its effect is compensated by the effect of the other coefficients relative to player abilities. We will therefore test the following hypothesis : 
 \[H_0 : \beta_{Overall} 
 \\= \frac{\beta_{Potential}+\beta_{HeadingAccuracy}+\beta_{Reactions}+\beta_{Jumping}+\beta_{Strength}+
 \beta_{Aggression}+\beta_{Composure}+\beta_{Marking}}{8} \]
@@ -543,13 +477,13 @@ linearHypothesis(model, hypothesis.matrix = hyp)
 
 ```
 
-We see in the table above that we can reject the restricted model (i.e the model under $H_0$). We can conlude that the effect of the overall variable is not the opposite effect of the mean of the effect of the players abilities. 
+We see in the table above that we can reject the restricted model (i.e. the model under $H_0$). We can conclude that the effect of the \textit{Overall} variable is not equal to the mean of the effect of the players abilities. 
 
 
 # Test of nullity of a subset of coefficients
 
-We would like to see if we can simplify our model a bit to a restricted model. For that, we will check if we can say that some of the $\beta_j$ (actually, the ones that we have previously suspected to be non significative) are simultaneously equal to 0.
-Our test staistic is 
+We would like to see if we can simplify our model a bit to a restricted model. For that, we will check if we can say that some of the $\beta_j$ (actually, the ones that we have previously suspected to be non significant) are simultaneously equal to 0.
+Our test statistic is 
 \[\frac{(SSE_0 - SSE)/q}{SSE/(n-p)} \sim F_{q, n-p} \]
 The idea behind this test is that under $H_0$, $SSE$ and $SSE_0$ should be close. We will therefore reject $H_0$ if the statistic is beyond a critical value (for a $F_{q, n-p}$ distribution).
 
@@ -557,17 +491,17 @@ The idea behind this test is that under $H_0$, $SSE$ and $SSE_0$ should be close
 linearHypothesis(model, c("Jumping=0", "Weight=0", "Preferred_FootLeft=0"))
 ```
 
-In the result table above, we look at the foolowing null hypothesis :
-\[H_0 : \beta_{Jumping}=\beta_{Weight}=\beta_{PreferredFootLeft}=0\]
+In the result table above, we look at the following null hypothesis :
+\[H_0 : \beta_{Jumping}=\beta_{Weight}=\beta_{Preferred\_FootLeft}=0\]
 
-We see that we have a p-value of 0.04 for this F-test. That is, we reject the null hypothesis if we choose a confidence level of 0.05, but not if the level is 0.01. Since we have worked with a p-value of 0.05 since the begenning, we can reject $H_0$. So we reject the assertion that $\beta_{Jumping}$, $\beta_{Weight}$ and $\beta_{PreferredFootLeft}$ are null simultaneously.
+We see that we have a p-value of <code style="font-weight:bold">0.04</code> for this F-test. That is, we reject the null hypothesis if we choose a confidence level of 0.05, but not if the level is 0.01. Since we have worked with a p-value of 0.05 since the beginning, we can reject $H_0$. So we reject the assertion that $\beta_{Jumping}$, $\beta_{Weight}$ and $\beta_{Preferred\_FootLeft}$ are null simultaneously.
 
 
 # Predictions
-We are now interested in calculating confidence intervals for the observations that we left apart in the begining. Thus, now we are not working with our training dataset anymore (80% of the initial data), but with our validation dataset (the 20% left).
+We are now interested in calculating confidence intervals for the observations that we left apart in the beginning. Thus, now we are not working with our training dataset anymore (80% of the initial data), but with our validation dataset (the 20% left).
 
 We know that a prediction interval at level (1-$\alpha$)100% for a new vector observation $x_h$ is 
-\[\hat{Y}_h \pm t_{n-p;1-\alpha/2}S(1+x_h^{'}(X'X)^{-1}x_h)^{1/2}\]. 
+\[\hat{Y}_h \pm t_{n-p;1-\alpha/2}S(1+x_h^{'}(X'X)^{-1}x_h)^{1/2}\]
 It is wider than the confidence region for $E[Y_h]$ because for $Y_h$ we also have the incertitude of the error $\epsilon$.
 
 
@@ -575,26 +509,26 @@ It is wider than the confidence region for $E[Y_h]$ because for $Y_h$ we also ha
 predictions = exp(predict(model, newdata = valid, interval = "confidence"))
 
 plot(1:nrow(valid), valid$Wage, pch=16, cex=0.2, xlab="Obs", ylab="Wage")
-legend("topright", legend = c("Observed Values", "Predicted Values"), fill = c("black", "green"))
-points(1:nrow(valid), predictions[,1], col=3, pch=16, cex=0.1)
+legend("topright", legend = c("Observed Values", "Predicted Values"), fill = c("black", opt.barcolor))
+points(1:nrow(valid), predictions[,1], col=opt.barcolor, pch=16, cex=0.1)
 # points(1:nrow(valid), predictions[,2], col=2, pch=16, cex=0.1)
 # points(1:nrow(valid), predictions[,3], col=2, pch=16, cex=0.1)
 
 aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,3]))
-aimed / nrow(valid)*100
+k=aimed / nrow(valid)*100
 ```
 
-We can see above the actual values of the wage variable of the validation dataset, next to the predicted ones. We see a certain fit with the observed data, which is good. However, we calculate that only 5% of our prediction intervals contains the observed values, which is very poor. 
+We can see above the actual values of the \textit{Wage} variable of the validation dataset, next to the predicted ones. We see a certain fit with the observed data, which is good. However, we calculate that only <code style="font-weight:bold">`r round(k,2)`%</code> of our prediction intervals contains the observed values, which is very poor. 
 
 
 
 # Conclusion
 
-Our main goal was to make football managers know the wage they have to pay their players, in order to be around the average of what other clubs do. That is a useful information because it could be a precious help to the club accounting. We started by selecting the variables that would compose our model. We did that using several methods of selection (AIC-stepwise, LASSO). We also checked if we had better goodness of fit criteria by taking the log of the response variable, and that was the case. We selected a model that was not too complicated but that had still a good fit to the training data. It was the AIC-stepwise model. We were not surprised to see that the value of the player was significative. In fact, the value of the player is one of the variables that help the most to predict his wage. Unsurprinsingly, some game characteritics play a role too. 
+Our main goal was to make football managers know the wage they have to pay their players, in order to be around the average of what other clubs do. That is a useful information because it could be a precious help to the club accounting. We started by selecting the variables that would compose our model. We did that using several methods of selection (AIC-stepwise, LASSO). We also checked if we had better goodness of fit criteria by taking the log of the response variable, and that was the case. We selected a model that was not too complicated but that had still a good fit to the training data. It was the AIC-stepwise model. We were not surprised to see that the value of the player was significant. In fact, the value of the player is one of the variables that help the most to predict his wage. Unsurprisingly, some game characteristics play a role too. 
 
-We then tested some hypotheses on our selected model. We saw that we have nonlinearities, heteroscedasticity and non normality of the error term. We tried to take remedial actions against that but we think that the non-linear relation in the true model is very complicated, since we did not manage to improve the model with simple analytic transformations of our variables. We saw that we have some outliers and influential observations, but not so much in comparison to the size of the dataset. Of course we did not delete them because this phenomenon might hide the lack of an important explanatory variable, such as player popularity, for example. We tried then some linear hypotheses, but we had to reject all of them.
+We then tested some hypotheses on our selected model. We saw that we have nonlinearities, heteroskedasticity and non normality of the error term. We tried to take remedial actions against that but we think that the nonlinear relation in the true model is very complicated, since we did not manage to improve the model with simple analytic transformations of our variables. We saw that we have some outliers and influential observations, but not so much in comparison to the size of the dataset. Of course we did not delete them because this phenomenon might hide the lack of an important explanatory variable, such as player popularity, for example. We tried then some linear hypotheses, but we had to reject all of them.
 
-Finally, and maybe the most important part of the project, the prediction. Unfortunately, we have a severe drawback of our model for this section, our model has very bad predictive power. Our prediction intervals only cover the true value observed in the validation dataset only in 5% of the cases ... 
+Finally, and maybe the most important part of the project, the prediction. Unfortunately, we have a severe drawback of our model for this section, our model has very bad predictive power. Our prediction intervals only cover the true value observed in the validation dataset only in 5% of the cases... 
 
 As a conclusion, we could say that this project was very interesting because it was a dive into a realistic practical problem. 
 Furthermore, the fail to predict correctly our response variables with linear models pushes us to learn more about other regression techniques, and therefore diversify our statistics advanced techniques. 
@@ -603,6 +537,31 @@ Furthermore, the fail to predict correctly our response variables with linear mo
 
 
 
+# Appendix
+
+## Histograms and boxplots
+
+```{r, fig.height=1.8, out.width="100%"}
+draw.hist.boxplots(data.frame(dataset,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)), 1, 4, T)
+```
+
+## Stepwise model selection
+
+```{r}
+# Stepwise AIC 
+model.aic
+model.aiclogy
+```
+
+## Influence diagnostics
+
+```{r}
+# TODO in layout!
+p = ols_plot_dfbetas(model, print_plot = F)
+for (i in 1:length(p$plots)){
+  print(changePlot(p$plots[[i]]))
+}
+```
 
 
 
