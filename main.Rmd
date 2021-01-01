@@ -241,15 +241,15 @@ models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 ```
 
 ## Final Model (without interactions)
-We have now looked at 6 differents models : the complete regression model (two kinds), the AIC-stepwise regression model (two kinds) and the LASSO regression model (two kinds). Indeed, for each of them, we have estimated a model of regression against the \textit{Wage} variable and against the \textit{log_wage} variable. We have done that because we suspected non linear relations in our model. 
+We have now looked at 6 different models : the complete regression model (two kinds), the AIC-stepwise regression model (two kinds) and the LASSO regression model (two kinds). Indeed, for each of them, we have estimated a model of regression against the \textit{Wage} variable and against the \textit{log_wage} variable. We have done that because we suspected non linear relations in our model. 
 ```{r}
 formattable(models.comparison, list(
   formattable::area(row=4) ~ formatter("span", style= ~ style(font.weight="bold"))
 )) 
 ```
 
-The table above shows a model comparison for those 6 models. We use various criteria such as the loglikelihhod, the AIC, the adjusted R-squared and the deviance. We see that the adjusted R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model with log of the \textit{Wage} variable because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression).
-
+The table above shows a model comparison for those 6 models. We use various criteria such as the log-likelihood, the AIC, the adjusted R-squared and the deviance. We see that the adjusted R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. We decide to take as final model the AIC-stepwise model with log of the \textit{Wage} variable because it has almost as good goodness of fit criteria as the LASSO, but it has only 15 variables (compared to 20 for the LASSO regression). The final is then given by \[\log{Wage} = -7.96 + 0.11 Overall + 0.018Potential + 0.0021Weight + 0.005HeadingAccuracy + 0.0034Reactions \\ - 0.0008Jumping - 0.0035Strength + 0.002Aggression + 0.0018Composure - 0.003 Marking + 0.028Value \\ + 0.104NationalityAfrica + 0.284NationalityAsia + 0.117NationalityEurope + 0.021Preferred\_FootLeft\]
+where \textit{NationalityAfrica}, \textit{NationalityAsia}, \textit{NationalityEurope} and \textit{Preferred_FootLeft} are dummy variables.
 ```{r}
 #setting the final model (aic logy)
 model = model.aiclogy
@@ -260,7 +260,7 @@ model = model.aiclogy
 
 ## Interactions
 
-We test different possible interactions in the following. The first model with interaction contains an interaction term between the \textit{Preferred_FootLeft} variable and the \textit{Marking} variable. We then consider interaction between \textit{Preferred_FootLeft} and \textit{Value} (Model 2 with interaction), interaction between \textit{NationalityEurope} and \textit{Potential} (Model 3 with interaction) and interaction between \textit{NationalityAfrica} and \textit{Value} (Model 4 with interaction).
+We test different possible interactions in the following : we add each time an interaction term in the basis model (final model) and then look at the properties of the new model. The first model with interaction contains an interaction term between the \textit{Preferred_FootLeft} variable and the \textit{Marking} variable. We then consider interaction between \textit{Preferred_FootLeft} and \textit{Value} (Model 2 with interaction), interaction between \textit{NationalityEurope} and \textit{Potential} (Model 3 with interaction) and interaction between \textit{NationalityAfrica} and \textit{Value} (Model 4 with interaction).
 
 ```{r}
 
@@ -287,11 +287,11 @@ In the comparative table above, we see that the interactions we are testing does
 
 # Underlying Hypotheses Testing
 
-We will now check for nonlinearity, outliers (and influential observations), multicollinearity, heteroskedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fullfilled, we will try to take remedial actions.
+We will now check for nonlinearity, outliers and influential observations, multicollinearity, heteroskedasticity, autocorrelation and normality of the residuals. If some of these hypotheses are not fulfilled, we will try to take remedial actions.
 
 ## Nonlinearity
 
-We would like to check whether it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with j = 1, ..., p-1.  
+We would like to check whether it was a good choice to make a linear model regression. In particular, we would like to check if the regression function is linear. In order to do that, we will look at scatter plots of the residuals $e_i$ against $X_{ij}$, with $j = 1, ..., p-1$.  
 
 ```{r}
 #train$Value = log(train$Value)
@@ -392,24 +392,25 @@ p = ols_vif_tol(model)
 formattable(p, align=c("l", "c", "c"))
 ```
 
-We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of <code style="font-weight:bold">2.44</code>. Since it is not extremely far from one, we decide not to do a Ridge Regression, indeed it seems not necessary so far.
+We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of <code style="font-weight:bold">2.44</code>. Since it is not extremely far from one, we decide not to take remedial actions such as a Ridge Regression. 
 
 # Heteroskedasticity 
 
-We plot the residuals against the fitted values to consider possible heteroskedasticity. If the variance of the residuals is considerably variable, we discard the hypothesis of homoskedasticity, meaning that there is heteroskedasticity. We can also look at the Breusch-Pagan test to detect heteroskedasticity. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
+Based on the scatter plots of the residuals $e_i$ against $X_{ij}$, with $j = 1, ..., p-1$ in the study of nonlinearity, we can strongly suspect that there is heteroskedasticity. Let's have a look at the scatter plot of the residuals against the fitted values. If the variance of the residuals is considerably variable, we discard the hypothesis of homoskedasticity, meaning that there is heteroskedasticity. 
 
 ```{r}
 #Residuals vs fitted
-plot(model$residuals, model$fitted.values, pch=21, bg=opt.barcolor)
+plot(model$residuals, model$fitted.values, xlab="Residuals", ylab="Fitted Values", pch=21, bg=opt.barcolor)
 ```
-It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicated to decide only on basis of this graph whether there is heteroskedasticity, so we decide to do a Breusch-Pagan test.
+It seems that the more the fitted values are big, the more our residuals tends to be negative. It is a bit complicated to decide only on basis of this graph whether there is heteroskedasticity, so we decide to do a Breusch-Pagan test. Note that the null hypothesis of this test states the homoskedasticity whereas in the alternative hypothesis the variance of the residuals is dependent on the observation (i.e. player) considered (equivalent to heteroskedasticity).
+
 
 ```{r}
 ols_test_breusch_pagan(model, rhs = T, multiple=T)
 
 ```
 
-With a p-value of <code style="font-weight:bold">3.6e-174</code>, it is perfectly clear that we can reject the null hypothesis of homoskedasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent.
+With a p-value of <code style="font-weight:bold">3.6e-174</code>, it is perfectly clear that we can reject the null hypothesis of homoskedasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent. As a result, we don't really have to consider remedial actions such as the method of weighted least squares and Box-Cox transformation.
 
 
 # Autocorrelation
@@ -508,8 +509,8 @@ It is wider than the confidence region for $E[Y_h]$ because for $Y_h$ we also ha
 predictions = exp(predict(model, newdata = valid, interval = "confidence"))
 
 plot(1:nrow(valid), valid$Wage, pch=16, cex=0.2, xlab="Obs", ylab="Wage")
-legend("topright", legend = c("Observed Values", "Predicted Values"), fill = c("black", "green"))
-points(1:nrow(valid), predictions[,1], col=3, pch=16, cex=0.1)
+legend("topright", legend = c("Observed Values", "Predicted Values"), fill = c("black", opt.barcolor))
+points(1:nrow(valid), predictions[,1], col=opt.barcolor, pch=16, cex=0.1)
 # points(1:nrow(valid), predictions[,2], col=2, pch=16, cex=0.1)
 # points(1:nrow(valid), predictions[,3], col=2, pch=16, cex=0.1)
 
