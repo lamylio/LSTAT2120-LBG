@@ -396,14 +396,14 @@ $$ \big|DFBETAS_{k,i}\big|>\frac{2}{\sqrt{n}}, \text{where} \\
 
 In our case, $\frac{2}{\sqrt{n}} \approx 0.02$. Thus, every plot of $DFBETAS$ in appendix corresponds to the coefficient associated with the concerned variable. Then we see that there aren't much influential points for the regression coefficient associated with the <i>Value</i> variable whereas the regression coefficient associated with the <i>Preferred_FootLeft</i> variable has a lot of influential observations.
 
-To have an overview of all the influential points, we look at the Cook's distance. 
+To have an overview of all the influential points, we look at the Cook's distance. Recall that Cook's distance is defined as $$D_i = \frac{(\hat{\beta}-\hat{\beta}_{(i)})'X'X(\hat{\beta}-\hat{\beta}_{(i)})}{pMSE}=\frac{(\hat{Y}-\hat{Y}_{(i)})'(\hat{Y}-\hat{Y}_{(i)})}{pMSE}$$
+Note that $D_i$ measures the influence of the i-th observation on the coefficients and on the fitted values.
 
 ```{r}
 plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance", pch=16, col = opt.barcolor)
 abline(h=4/14326, col="red", lwd=2)
 ```
-Recall that Cook's distance is defined as $$D_i = \frac{(\hat{\beta}-\hat{\beta}_{(i)})'X'X(\hat{\beta}-\hat{\beta}_{(i)})}{pMSE}=\frac{(\hat{Y}-\hat{Y}_{(i)})'(\hat{Y}-\hat{Y}_{(i)})}{pMSE}$$
-Note that $D_i$ measures the influnce of the i-th observation on the coefficients and on the fitted values. Here, the Cook's distances are very low (very close to 0 for the wide majority). We choose as decision rule that the influential points are the ones for which the Cook's distance $D_i$ is bigger than $\frac{4}{n}$ (threshold represented in red on the previous plot) where $n$ is the number of observations (common criteria). 
+Here, the Cook's distances are very low (very close to 0 for the wide majority). We choose as decision rule that the influential points are the ones for which the Cook's distance $D_i$ is bigger than $\frac{4}{n}$ (threshold represented in red on the previous plot) where $n$ is the number of observations (common criteria). 
 
 
 # Multicollinearity
