@@ -419,7 +419,7 @@ p = within(p, {
 formattable(p, align=c("l", "c", "c"))
 ```
 
-<b style="color: red">We see on the result table above that we have no VIF superior to 10, which is good news. The mean of all these VIF is of <code id="code">2.44</code>. Since it is not extremely far from one, we decide not to take remedial actions such as a Ridge Regression. </b>
+Since we have VIF of <code id="code">`r p[2,3]`</code> (for <i>Overall</i>) and <code id="code">`r p[5,3]`</code> (for <i>Value</i>), based on our decision rule, there is a multicollinearity problem. Moreover, the mean of all these VIF is of <code id="code">`r round(mean(p[,3]), 3)`</code>, which is also considerably larger than than one. Nevertheless, we can not apply Ridge Regression since the underlying assumptions are not satisfied. Indeed, as shown before, the linearity criterion isn't that clear. Moreover, we can show that there is heteroskedasticity (see next section). As a result, we have to cope with that multicollinearity problem in the following.
 
 # Heteroskedasticity 
 
