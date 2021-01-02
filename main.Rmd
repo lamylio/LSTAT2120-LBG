@@ -504,10 +504,7 @@ We show below the estimates and significance test for the variables that are inc
 summary(model)
 ```
 
-All our coefficients are significant at an $\alpha$−level 0.01. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from <i>NationalityAmerica</i> and the intercept. In fact, beeing American seem to lower your salary by 890\$. Being Asian, conversely, increases your wage by 1200\$. An explantion for that could be that rising clubs in country like Qatar or Saudi Arabia recruits manly asian players, and pay them well. The explanation for the coefficient of <i>NationalityAmerica</i> could be that South American players are more keen to accept lwer salaries, since these countries have lower income level on average.
-
-
-
+All our coefficients are significant at a $\alpha−level$ 0.01. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from <i>NationalityAmerica</i> and the intercept. In fact, beeing American seems to increase your salary by 890\$. Since we are working with the log of the <i>Wage</i>, even a negative coefficient increases the salary. Being Asian, moreover, increases your wage by 1700\$. An explantion for that could be that rising clubs in country like Qatar or Saudi Arabia recruits manly asian players, and pay them well. The explanation for the coefficient of <i>NationalityAmerica</i> could be that South American players are really praised in top Europeean football clubbs.
 
 # Coefficient Linear Combination
 
@@ -564,8 +561,7 @@ aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,
 k=aimed / nrow(valid)*100
 ```
 
-We can see above the actual values of the <i>Wage</i> variable of the validation dataset, next to the predicted ones. We see a certain fit with the observed data, which is good. However, we calculate that only <code id="code">`r round(k,2)`%</code> of our prediction intervals contains the observed values, which is very poor. 
-
+we calculate that only <code id="code">`r round(k,2)`%</code> of our prediction intervals contains the observed values, which is very poor. However, we can see above the actual values of the <i>Wage</i> variable of the validation dataset, next to the predicted ones. We see a certain fit with the observed data, which is good. 
 
 
 # Conclusion
