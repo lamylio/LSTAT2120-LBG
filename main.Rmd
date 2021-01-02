@@ -544,8 +544,7 @@ aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,
 k=aimed / nrow(valid)*100
 ```
 
-We can see above the actual values of the <i>Wage</i> variable of the validation dataset, next to the predicted ones. We see a certain fit with the observed data, which is good. However, we calculate that only <code id="code">`r round(k,2)`%</code> of our prediction intervals contains the observed values, which is very poor. 
-
+we calculate that only <code id="code">`r round(k,2)`%</code> of our prediction intervals contains the observed values, which is very poor. However, we can see above the actual values of the <i>Wage</i> variable of the validation dataset, next to the predicted ones. We see a certain fit with the observed data, which is good. 
 
 
 # Conclusion
