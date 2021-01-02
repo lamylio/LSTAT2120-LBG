@@ -11,12 +11,17 @@ output:
     toc_depth: 3
     fig_caption: yes
     number_sections: no
+    fontsize: 10pt
   html_document: default
   rmarkdown::html_document: default
   pdf_document:
     toc: yes
     toc_depth: 3
 ---
+
+<style>
+.main-content, .toc{font-size: 0.8rem;}
+</style>
 
 ```{r global.options, include=F}
 knitr::opts_chunk$set(
@@ -28,7 +33,7 @@ knitr::opts_chunk$set(
   message=F,
   
   	
-  out.width= "80%",	
+  out.width= "50%",
   fig.align = "center",	
   fig.path = "figs/"
   	
@@ -53,7 +58,7 @@ i {text-transform: normal; font-weight: 500;}
 
 # Introduction and objective
 
-<b><u>Note</u>:</b> all the tables, figures and the code used in this project <a href="https://github.com/lamylio/LSTAT2020Project">can be found on github</a>.
+<b><u>Note</u>:</b> all the tables, figures and the code used in this project <a href="https://github.com/lamylio/LSTAT2120-LBG">can be found on github</a>.
 
 For this project, we will use a <a href="https://www.kaggle.com/karangadiya/fifa19">dataset</a> that contains all the FIFA 19 player characteristics (FIFA is a football simulation video game, and our dataset come from the 2019's edition). This dataset contains <code id="code">18059</code> observations (all the different players created in the game) and <code id="code">`r 34`</code> variables (characteristics such as Age, Nationality, Wage, Stamina, ...). 
 
@@ -105,7 +110,7 @@ dataset = within(original, {
 
 Among the 34 variables, 27 take values in percentage : it mainly concerns the game features such as agility, dribbling, ball control... The other quantitative variables are the age (given in years), the wage (given in thousands of euros), the height (given in centimeters), the weight (given in kilograms) and the value of the player (given in million of euros). We should also emphasize the fact that we have two categorical variables called <i>Preferred_Foot</i> (with two levels : Left and Right) and <i>Nationality</i> (with five levels : Africa, America, Asia, Europe and Oceania). We can look at the two corresponding barplots.
 
-```{r descriptive, out.width="80%"}
+```{r descriptive}
 # Histogram of qualitative variable
 
 par(mfrow=c(1,2))
