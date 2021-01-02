@@ -20,7 +20,11 @@ output:
 ---
 
 <style>
-
+.main-content, .toc{font-size: 0.8rem;}
+.main-content pre, code{
+  font-size: 0.6rem !important;
+  line-height: 1.2;
+}
 </style>
 
 ```{r global.options, include=F}
@@ -462,12 +466,12 @@ t = ols_test_breusch_pagan(model, rhs = T, multiple=T)
 t
 ```
 
-With a p-value of <code id="code">`r 3.318e-163`</code>, it is perfectly clear that we can reject the null hypothesis of homoskedasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent. As a result, we don't really have to consider remedial actions such as the method of weighted least squares and Box-Cox transformation.
+With a p-value of <code id="code">3.318e-163</code>, it is perfectly clear that we can reject the null hypothesis of homoskedasticity. Hopefully, we have done a robust inference so our $\hat\beta$ estimator is consistent. As a result, we don't really have to consider remedial actions such as the method of weighted least squares and Box-Cox transformation.
 
 
 # Autocorrelation
 
-Autocorrelation is discussed through the Breusch-Godfrey test. Recall that this test looks at non-autocorrelation ($H_0$) versus autocorrelation ($H_1$). The null hypothesis can be written as $Corr(\varepsilon_t, \varepsilon_{t-k})=0$ for $k=1,...,p$.
+Autocorrelation is discussed through the Breusch-Godfrey test. Recall that this test looks at non-autocorrelation ($H_0$) versus autocorrelation ($H_1$). The null hypothesis can be written as $corr(\varepsilon_t, \varepsilon_{t-k})=0$ for $k=1,...,p$.
 
 ```{r}
 t = bgtest(model, order = 8)
@@ -509,7 +513,7 @@ We show below the estimates and significance test for the variables that are inc
 summary(model)
 ```
 
-All our coefficients are significant at a $\alpha−level$ 0.01. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from <i>NationalityAmerica</i> and the intercept. In fact, beeing American seems to increase your salary by 890\$. Since we are working with the log of the <i>Wage</i>, even a negative coefficient increases the salary. Being Asian, moreover, increases your wage by 1700\$. An explantion for that could be that rising clubs in country like Qatar or Saudi Arabia recruits manly asian players, and pay them well. The explanation for the coefficient of <i>NationalityAmerica</i> could be that South American players are really praised in top Europeean football clubbs.
+All our coefficients are significant at an $\alpha$−level of 0.01. We note that all the coefficients estimates $\beta_j$ have a positive sign, apart from <i>NationalityAmerica</i> and the intercept. In fact, beeing American seems to increase your salary by 890\$. Since we are working with the log of the <i>Wage</i>, even a negative coefficient increases the salary. Being Asian, moreover, increases your wage by 1700\$. An explantion for that could be that rising clubs in country like Qatar or Saudi Arabia recruits manly asian players, and pay them well. The explanation for the coefficient of <i>NationalityAmerica</i> could be that South American players are really praised in top Europeean football clubbs.
 
 # Coefficient Linear Combination
 
@@ -615,7 +619,7 @@ plot(t)
 
 ## Influence diagnostics
 
-```{r, fig.height=10, out.width="100%"}
+```{r, fig.height=3, out.width="80%"}
 library(cowplot)
 p = ols_plot_dfbetas(model, print_plot = F)
 
@@ -626,14 +630,22 @@ p = lapply(p$plots, function(x) {
   return(x)
 })
 
-plot_grid(plotlist = p, ncol = 2)
+plot_grid(plotlist = p[1:2], ncol = 2)
+plot_grid(plotlist = p[3:4], ncol = 2)
+plot_grid(plotlist = p[5:6], ncol = 2)
+plot_grid(plotlist = p[7:8], ncol = 2)
 ```
 
 
 ## Code
 
 ```{r, eval=F, echo=T}
-### homemade functions 
+library(ggplot2)
+
+# ===
+# Setup and helper functions
+
+
 opt.digits = 3
 opt.barcolor = "blue"
 
@@ -655,6 +667,7 @@ addComparison = function(model, model_name){
   )
 }
 
+# Remove text and change color of ggplot
 changePlot = function(p){
   p$layers[[5]] = NULL
   p$layers[[4]] = NULL
@@ -665,20 +678,15 @@ changePlot = function(p){
   return (p)
 }
 
+# Remove background and grid of ggplot
 removeBackground = function(p){
   p$theme = list(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank())
   return (p)
 }
 
-============================================================================================================
-============================================================================================================
-  
-### Descriptive Analysis : Mean, Sd, Skewness, Kurtosis 
+# Descriptive analysis : Mean, Sd, Skewness and Kurtosis
 library(moments)
-library(formattable) # Better print
-library(ggplot2)
-library(gridExtra)
-
+library(formattable)
 compute.desc.quantitative = function(data){
   
   addStats = function(col, name){
@@ -707,11 +715,7 @@ compute.desc.quantitative = function(data){
   
 }
 
-============================================================================================================
-============================================================================================================
-
-### Descriptive Analysis : Histograms and Boxplots 
-
+# Histograms with boxplots below 
 draw.hist.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
   
   
@@ -729,16 +733,20 @@ draw.hist.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
   
 }
 
+
+# ===
+# Data importation
+
 set.seed(28122020)
 original = read.csv("./sources/foot_last.csv", sep=";", encoding = "utf8", skipNul = T, stringsAsFactors = F)
 original = na.omit(original)
 original = original[-which(original == 0, arr.ind = T)[,1],] # remove rows where value is 0
 
-# Dummies variables setting 
+# Dummies variables
 dummies = data.frame(model.matrix(~ Nationality - 1, data=original), 
                      model.matrix(~ Preferred_Foot - 1, data=original))
 
-# Transformations of the variables
+# Transformations and cleaning
 dataset = within(original, {
   Weight  = round(as.numeric(Weight*0.453592))
   Height = round(sapply(Height, function(x) 
@@ -753,35 +761,36 @@ dataset = within(original, {
   Preferred_Foot = NULL
 })
 
-# Histogram of qualitative variable
+# ===
 
+# Histogram of qualitative variable
 par(mfrow=c(1,2))
 barplot(prop.table(table(original$Preferred_Foot)), main="Preferred foot of the player", col = opt.barcolor, ylab="Percentage")
 barplot(prop.table(table(original$Nationality)), main="Nationality of the player", col = opt.barcolor, ylab="Percentage",las=2)
 
-desc.quantitative = compute.desc.quantitative(dataset)
 
+# Print desc
+desc.quantitative = compute.desc.quantitative(dataset)
 formattable(desc.quantitative, align=c("l", rep("c", ncol(desc.quantitative)-1)))
 
-# Boxplot and Histogram
 
+# Boxplot and Histogram
 draw.hist.boxplots(
   data.frame(Wage=dataset$Wage, Value=dataset$Value,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)),
   1, 4, TRUE
 )
 
-============================================================================================================
-============================================================================================================
+# ===
+# Correlation Matrix 
 
-### Descriptive Analysis : Correlation Matrix 
 library(corrplot)
 corrplot(cor(dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 
-# Suppression/merge of correlated variables
+# Removing of "similar" variables
 clean_dataset = dataset[,c(1:5, 8, 19, 22, 24, 26:27, 31, 32:34)]
-
 clean_dataset$Value = log(clean_dataset$Value)
 
+# New correlation matrix
 corrplot(cor(clean_dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 
 library(olsrr)
@@ -790,10 +799,9 @@ library(lmtest)
 library(MASS)
 library(glmnet)
 
-============================================================================================================
-============================================================================================================
-  
-### Splitting into training and validation 
+# ===
+# Split into training and validation sets
+
 tmp = sample(nrow(clean_dataset), round(.80*nrow(clean_dataset)), replace=F)
 
 train = cbind(clean_dataset[tmp,], dummies[tmp,])
@@ -801,105 +809,126 @@ valid = cbind(clean_dataset[-tmp,], dummies[-tmp,])
 
 rm(tmp)
 
-============================================================================================================
-============================================================================================================
+# ===
+# Model selection
 
-### Complete Model 
-formula.complete = as.formula("Wage ~ .")
+# Complete Model 
+
 formula.complete.logy = as.formula("log(Wage) ~ .")
-model.complete = lm(formula.complete, data=train)
 model.complete.logy = lm(formula.complete.logy, data=train)
+
 models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 
-### Stepwise AIC 
-model.aic = stepAIC(model.complete, direction = "both", trace = F)
 
-### Stepwise AIC log(Y) 
+# Stepwise AIC log(Y) 
 model.aiclogy = stepAIC(model.complete.logy, direction = "both", trace = F, k = 2)
+
 models.comparison = addComparison(model.aiclogy, "Stepwise AIC log(Y)")
 aicdiff = setdiff(names(train), names(model.aiclogy$coefficients))
 
-### LASSO 
-lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = train$Wage, family = "gaussian", alpha=1)
-lasso.coef = coef(lasso.cv, 0.5661)
-formula.lasso = as.formula(paste0("Wage ~ ", paste(rownames(lasso.coef)[which(abs(lasso.coef) > 0)][0:-1], collapse=" + ")))
-model.lasso = lm(formula.lasso, data=train)
-
-### LASSO log(Y) 
+# LASSO log(Y) 
 lasso.cvlogy = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = log(train$Wage), family = "gaussian", alpha = 1)
-lasso.coeflogy = coef(lasso.cvlogy, 0.04641)
+lasso.coeflogy = coef(lasso.cvlogy, 0.04641) # Best lambda in our opinion
+
 formula.lassology = as.formula(paste0("log(Wage) ~ ", paste(rownames(lasso.coeflogy)[which(abs(lasso.coeflogy) > 0)][0:-1], collapse=" + ")))
+
 model.lassology = lm(formula.lassology, data=train)
 models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 
 
-### Model selection : setting the Final Model 
+# ===
+# Chosen model
+
 choice = 3
 model = model.lassology
+
 formattable(models.comparison, list(
   formattable::area(row=choice) ~ formatter("span", style= ~ style(font.weight="bold"))
 ))
+
 formula.model = paste0("log(Wage) ~ ", paste(names(coef(model))[0:-1], collapse=" + "))
 
-### Variables interactions 
+# ===
+# Variables interactions 
+
 model.interaction1 = lm(paste0(formula.model, " + Preferred_FootLeft * Marking"), data = train)
 model.interaction2 = lm(paste0(formula.model, " + Preferred_FootLeft * Value"), data = train)
 model.interaction3 = lm(paste0(formula.model, " + NationalityEurope * Potential"), data = train)
 model.interaction4 = lm(paste0(formula.model, " + NationalityAfrica * Value"), data = train)
+
+# Reset the model comparison df
 models.comparison = data.frame()
 models.comparison = addComparison(model, "Final Model")
 models.comparison = addComparison(model.interaction1, "Model 1")
 models.comparison = addComparison(model.interaction2, "Model 2")
 models.comparison = addComparison(model.interaction3, "Model 3")
 models.comparison = addComparison(model.interaction4, "Model 4")
+
 formattable(models.comparison, align=c("l", "c"))
 
-============================================================================================================
-============================================================================================================
-  
-### Non-linearity relations
+# ===
+# Non-linearity relations
+
 par(mfrow=c(2,4))
 for(i in 2:6){
   par(mar=c(2,4,2,1))
   plot(x = unlist(model$model[i]), y=model$residuals, main = names(coef(model))[i], ylab = "Residuals", pch=16, col=opt.barcolor)
 }
 
-### Outliers with respect to X 
+# Outliers with respect to X 
+
 explanatory = train[, names(coef(model))[0:-1]]
 pn = (1+ncol(explanatory))*2/nrow(explanatory)
+
+# Matrix computation
 mafull = as.matrix(explanatory)
 macross = crossprod(mafull, mafull)
 mainv = solve(macross)
+
+# Use sapply for speed improvement
 hii = sapply(seq(1, nrow(explanatory)), 
   function(i){
     ma = as.matrix(explanatory[i,])
     return(ma %*% tcrossprod(mainv, ma))
   }
 )
+
 outliers_X = length(which(hii > pn))
 
-### Outliers with respect to Y 
+
+# Outliers with respect to Y 
+
 rStudentModel = as.matrix(rstudent(model))
 quantileStudent = qt(0.975, nrow(explanatory)-ncol(explanatory)-2)
+
 outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
   function(i){
     return(abs(rStudentModel[i]) > quantileStudent)
   }                        
 ))
 
-### Influential Obsevations 
+
+# Influential Obsevations 
+
 DFFITS = sapply(seq(1, nrow(explanatory)), 
   function(i){
     return(rStudentModel[i] * sqrt(hii[i]/(1-hii[i])))
   }
 )
+
 influential_fitted = length(which(abs(DFFITS) > 2*sqrt((1+ncol(explanatory))/nrow(explanatory))))
+
+# Plot influential
 p = ols_plot_dffits(model, print_plot = F)
 removeBackground(changePlot(p$plot))
-plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance", pch=16, col = rgb(0,0,255, alpha=125, maxColorValue = 255))
+
+plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance", pch=16, 
+     col = rgb(0,0,255, alpha=125, maxColorValue = 255))
 abline(h=4/14326, col="red", lwd=2)
 
-### Multicollinearity 
+# ===
+# Multicollinearity 
+
 p = ols_vif_tol(model)
 p = within(p, {
   Tolerance = round(Tolerance, opt.digits)
@@ -907,62 +936,73 @@ p = within(p, {
 })
 formattable(p, align=c("l", "c", "c"))
 
-
-### Heteroskedasticity : Residuals vs fitted 
-plot(model$fitted.values, model$residuals, xlab="Fitted values", ylab="Residuals", pch=16, col=opt.barcolor, main = "Residual vs Fitted Values")
+# ===
+# Heteroskedasticity : Residuals vs fitted 
+plot(model$fitted.values, model$residuals, xlab="Fitted values", ylab="Residuals", pch=16, 
+     col=opt.barcolor, main = "Residual vs Fitted Values")
 abline(h=0, col=2, lwd=2)
 
-### Heteroskedasticity : Breusch-Pagan test 
+# Breusch-Pagan test 
 t = ols_test_breusch_pagan(model, rhs = T, multiple=T)
 
-### Autocorrelation : Breusch-Godfrey test 
+# ===
+# Autocorrelation : Breusch-Godfrey test 
 t = bgtest(model, order = 8)
 
-### Normaility of the error term 
-#QQplot
+
+# ===
+# Normality of the error term 
+
+# QQplot
 qqnorm(model$residuals, pch = 1, frame = FALSE, col = opt.barcolor)
 qqline(model$residuals, lwd = 2)
-#Jarque-Bera test
+
+# Jarque-Bera test
 jarque.test(model$residuals)
 
-============================================================================================================
-============================================================================================================
-  
-### Coefficient Significance 
+
+# ===
+# Coefficient Significance 
 summary(model)
 
-### Linear Hypothesis 
+# Linear Hypothesis 
 library(car)
 hyp = c(0, 0, −2, 1, 1, 0, 0, 0)
 t = linearHypothesis(model, hypothesis.matrix = hyp)
 
-### Nullity of a small subset 
+# Nullity of a small subset 
 t = linearHypothesis(model, c("Reactions=0", "Composure=0"))
 
-============================================================================================================
-============================================================================================================
-  
-### Predictions 
+
+# ===
+# Predictions 
+
 predictions = exp(predict(model, newdata = valid, interval = "confidence"))
 plot(1:nrow(valid), valid$Wage, pch=16, cex=0.5, xlab="Obs", ylab="Wage", main="Observed vs Predicted", 
      col=rgb(0, 0, 0, alpha=125, max=255))
-legend("topright", legend = c("Observed Values", "Predicted Values"), pch = c(16,16), col=c(1,4))
 points(1:nrow(valid), predictions[,1], col=opt.barcolor, pch=16, cex=0.5)
+legend("topright", legend = c("Observed Values", "Predicted Values"), pch = c(16,16), col=c(1,4))
+
+# How many obs are in the CI
 aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,3]))
 k=aimed / nrow(valid)*100
 
-============================================================================================================
-============================================================================================================
-  
-### Appendix 
+
+# ===
+# Appendix 
+
 draw.hist.boxplots(data.frame(dataset,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)), 1, 4, T)
+
 model.aiclogy$anova
+
 print(model.lassology)
 lasso.cvlogy$glmnet.fit
+
 t = ols_plot_resid_stud_fit(model, print_plot = F)
 t$plot$layers[[3]] = NULL;t$plot$layers[[3]] = NULL;
 t = removeBackground(t$plot)
 plot(t)
+
 library(cowplot)
 p = ols_plot_dfbetas(model, print_plot = F)
 p = lapply(p$plots, function(x) {
@@ -972,4 +1012,7 @@ p = lapply(p$plots, function(x) {
   return(x)
 })
 plot_grid(plotlist = p, ncol = 2)
+
+# ===
+# END
 ```

@@ -7,7 +7,7 @@ h1, h2, h3, h4, h5, h6 { color: #0a4d7d !important;}
 table th { background-color: #0a4d7d !important;}
 
 pre{ overflow-x: hidden !important;}
-#code { font-weight: bold} 
+#code { font-weight: bold; font-size: 0.8rem !important;} 
 
 code{ white-space: pre-wrap !important;}
 
