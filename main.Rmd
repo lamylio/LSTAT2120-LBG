@@ -20,7 +20,7 @@ output:
 ---
 
 <style>
-.main-content, .toc{font-size: 0.8rem;}
+
 </style>
 
 ```{r global.options, include=F}
