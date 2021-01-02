@@ -633,7 +633,7 @@ plot_grid(plotlist = p, ncol = 2)
 ## Code
 
 ```{r, eval=F, echo=T}
-### homemade functions ###
+### homemade functions 
 opt.digits = 3
 opt.barcolor = "blue"
 
@@ -645,12 +645,9 @@ addComparison = function(model, model_name){
     Vars = length(names(coef(model)))-1,
     LogLik = ifelse(is.null(logLik(model)[1]), yes=NA, no=round(logLik(model)[1], opt.digits)),
     AIC = round(AIC(model), opt.digits),
-    #BIC = round(BIC(model), opt.digits),
     R2 = round(summary(model)$r.squared, opt.digits),
     Adjusted.R2 = round(summary(model)$adj.r.squared, opt.digits),
     Deviance = ifelse(is.null(deviance(model)), yes=NA, no=round(deviance(model), opt.digits))
-    #Deviance.custom = cost_deviance(base_train_freq$Frequency, model$fitted),
-    #row.names = as.character(model_name)
   )
   rbind(
     models.comparison,
@@ -672,7 +669,11 @@ removeBackground = function(p){
   p$theme = list(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank())
   return (p)
 }
-### Descriptive Analysis : Mean, Sd, Skewness, Kurtosis ###
+
+============================================================================================================
+============================================================================================================
+  
+### Descriptive Analysis : Mean, Sd, Skewness, Kurtosis 
 library(moments)
 library(formattable) # Better print
 library(ggplot2)
@@ -706,7 +707,10 @@ compute.desc.quantitative = function(data){
   
 }
 
-### Descriptive Analysis : Histograms and Boxplots ###
+============================================================================================================
+============================================================================================================
+
+### Descriptive Analysis : Histograms and Boxplots 
 
 draw.hist.boxplots = function(data, nrow=2, ncol=2, boxframe=T){
   
@@ -766,7 +770,10 @@ draw.hist.boxplots(
   1, 4, TRUE
 )
 
-### Descriptive Analysis : Correlation Matrix ###
+============================================================================================================
+============================================================================================================
+
+### Descriptive Analysis : Correlation Matrix 
 library(corrplot)
 corrplot(cor(dataset), type="upper", order="hclust", tl.col="black", tl.srt=90, tl.cex = 0.7)
 
@@ -783,7 +790,10 @@ library(lmtest)
 library(MASS)
 library(glmnet)
 
-### Splitting into training and validation ###
+============================================================================================================
+============================================================================================================
+  
+### Splitting into training and validation 
 tmp = sample(nrow(clean_dataset), round(.80*nrow(clean_dataset)), replace=F)
 
 train = cbind(clean_dataset[tmp,], dummies[tmp,])
@@ -791,29 +801,31 @@ valid = cbind(clean_dataset[-tmp,], dummies[-tmp,])
 
 rm(tmp)
 
+============================================================================================================
+============================================================================================================
 
-### Complete Model ###
+### Complete Model 
 formula.complete = as.formula("Wage ~ .")
 formula.complete.logy = as.formula("log(Wage) ~ .")
 model.complete = lm(formula.complete, data=train)
 model.complete.logy = lm(formula.complete.logy, data=train)
 models.comparison = addComparison(model.complete.logy, "Complete log(Y)")
 
-### Stepwise AIC ###
+### Stepwise AIC 
 model.aic = stepAIC(model.complete, direction = "both", trace = F)
 
-### Stepwise AIC log(Y) ###
+### Stepwise AIC log(Y) 
 model.aiclogy = stepAIC(model.complete.logy, direction = "both", trace = F, k = 2)
 models.comparison = addComparison(model.aiclogy, "Stepwise AIC log(Y)")
 aicdiff = setdiff(names(train), names(model.aiclogy$coefficients))
 
-### LASSO ###
+### LASSO 
 lasso.cv = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = train$Wage, family = "gaussian", alpha=1)
 lasso.coef = coef(lasso.cv, 0.5661)
 formula.lasso = as.formula(paste0("Wage ~ ", paste(rownames(lasso.coef)[which(abs(lasso.coef) > 0)][0:-1], collapse=" + ")))
 model.lasso = lm(formula.lasso, data=train)
 
-### LASSO log(Y) ###
+### LASSO log(Y) 
 lasso.cvlogy = cv.glmnet(x=data.matrix(within(train, {Wage = NULL})), y = log(train$Wage), family = "gaussian", alpha = 1)
 lasso.coeflogy = coef(lasso.cvlogy, 0.04641)
 formula.lassology = as.formula(paste0("log(Wage) ~ ", paste(rownames(lasso.coeflogy)[which(abs(lasso.coeflogy) > 0)][0:-1], collapse=" + ")))
@@ -821,7 +833,7 @@ model.lassology = lm(formula.lassology, data=train)
 models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 
 
-### Model selection : setting the Final Model ###
+### Model selection : setting the Final Model 
 choice = 3
 model = model.lassology
 formattable(models.comparison, list(
@@ -829,7 +841,7 @@ formattable(models.comparison, list(
 ))
 formula.model = paste0("log(Wage) ~ ", paste(names(coef(model))[0:-1], collapse=" + "))
 
-### Variables interactions ###
+### Variables interactions 
 model.interaction1 = lm(paste0(formula.model, " + Preferred_FootLeft * Marking"), data = train)
 model.interaction2 = lm(paste0(formula.model, " + Preferred_FootLeft * Value"), data = train)
 model.interaction3 = lm(paste0(formula.model, " + NationalityEurope * Potential"), data = train)
@@ -842,16 +854,17 @@ models.comparison = addComparison(model.interaction3, "Model 3")
 models.comparison = addComparison(model.interaction4, "Model 4")
 formattable(models.comparison, align=c("l", "c"))
 
-
-### Non-linearity relations###
+============================================================================================================
+============================================================================================================
+  
+### Non-linearity relations
 par(mfrow=c(2,4))
 for(i in 2:6){
   par(mar=c(2,4,2,1))
   plot(x = unlist(model$model[i]), y=model$residuals, main = names(coef(model))[i], ylab = "Residuals", pch=16, col=opt.barcolor)
 }
 
-
-### Outliers with respect to X ###
+### Outliers with respect to X 
 explanatory = train[, names(coef(model))[0:-1]]
 pn = (1+ncol(explanatory))*2/nrow(explanatory)
 mafull = as.matrix(explanatory)
@@ -865,7 +878,7 @@ hii = sapply(seq(1, nrow(explanatory)),
 )
 outliers_X = length(which(hii > pn))
 
-### Outliers with respect to Y ###
+### Outliers with respect to Y 
 rStudentModel = as.matrix(rstudent(model))
 quantileStudent = qt(0.975, nrow(explanatory)-ncol(explanatory)-2)
 outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
@@ -874,7 +887,7 @@ outliers_Y = sum(sapply(seq(1, nrow(explanatory)),
   }                        
 ))
 
-### Influential Obsevations ###
+### Influential Obsevations 
 DFFITS = sapply(seq(1, nrow(explanatory)), 
   function(i){
     return(rStudentModel[i] * sqrt(hii[i]/(1-hii[i])))
@@ -886,7 +899,7 @@ removeBackground(changePlot(p$plot))
 plot(cooks.distance(model), xlab="Index of the observation", ylab="Cooks distance", pch=16, col = rgb(0,0,255, alpha=125, maxColorValue = 255))
 abline(h=4/14326, col="red", lwd=2)
 
-### Multicollinearity ###
+### Multicollinearity 
 p = ols_vif_tol(model)
 p = within(p, {
   Tolerance = round(Tolerance, opt.digits)
@@ -895,35 +908,41 @@ p = within(p, {
 formattable(p, align=c("l", "c", "c"))
 
 
-### Heteroskedasticity : Residuals vs fitted ###
+### Heteroskedasticity : Residuals vs fitted 
 plot(model$fitted.values, model$residuals, xlab="Fitted values", ylab="Residuals", pch=16, col=opt.barcolor, main = "Residual vs Fitted Values")
 abline(h=0, col=2, lwd=2)
 
-### Heteroskedasticity : Breusch-Pagan test ###
+### Heteroskedasticity : Breusch-Pagan test 
 t = ols_test_breusch_pagan(model, rhs = T, multiple=T)
 
-### Autocorrelation : Breusch-Godfrey test ###
+### Autocorrelation : Breusch-Godfrey test 
 t = bgtest(model, order = 8)
 
-### Normaility of the error term ###
+### Normaility of the error term 
 #QQplot
 qqnorm(model$residuals, pch = 1, frame = FALSE, col = opt.barcolor)
 qqline(model$residuals, lwd = 2)
 #Jarque-Bera test
 jarque.test(model$residuals)
 
-### Coefficient Significance ###
+============================================================================================================
+============================================================================================================
+  
+### Coefficient Significance 
 summary(model)
 
-### Linear Hypothesis ###
+### Linear Hypothesis 
 library(car)
 hyp = c(0, 0, −2, 1, 1, 0, 0, 0)
 t = linearHypothesis(model, hypothesis.matrix = hyp)
 
-### Nullity of a small subset ###
+### Nullity of a small subset 
 t = linearHypothesis(model, c("Reactions=0", "Composure=0"))
 
-### Predictions ###
+============================================================================================================
+============================================================================================================
+  
+### Predictions 
 predictions = exp(predict(model, newdata = valid, interval = "confidence"))
 plot(1:nrow(valid), valid$Wage, pch=16, cex=0.5, xlab="Obs", ylab="Wage", main="Observed vs Predicted", 
      col=rgb(0, 0, 0, alpha=125, max=255))
@@ -932,8 +951,10 @@ points(1:nrow(valid), predictions[,1], col=opt.barcolor, pch=16, cex=0.5)
 aimed = length(which(valid$Wage >= predictions[,2] & valid$Wage <= predictions[,3]))
 k=aimed / nrow(valid)*100
 
-### Appendix ###
-
+============================================================================================================
+============================================================================================================
+  
+### Appendix 
 draw.hist.boxplots(data.frame(dataset,  Wage.log=log(dataset$Wage), Value.log=log(dataset$Value)), 1, 4, T)
 model.aiclogy$anova
 print(model.lassology)
