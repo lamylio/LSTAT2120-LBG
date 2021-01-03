@@ -10,8 +10,6 @@ output:
     toc: yes
     toc_depth: 3
     fig_caption: yes
-    number_sections: no
-    fontsize: 10pt
   html_document: default
   rmarkdown::html_document: default
   pdf_document:
@@ -25,6 +23,7 @@ output:
   font-size: 0.6rem !important;
   line-height: 1.2;
 }
+i {text-transform: normal; font-weight: 500;}
 </style>
 
 ```{r global.options, include=F}
@@ -51,14 +50,10 @@ opt.barcolor = "blue" #"#0a4d7d"
 ```
 
 ```{r utils}
-library("kableExtra")
+require("formattable")
 source("./sources/utils.R")
 source("./sources/descriptive.R")
 ```
-
-<style>
-i {text-transform: normal; font-weight: 500;}
-</style>
 
 # Introduction and objective
 
@@ -127,16 +122,12 @@ We observe that right-footed players are four times as many as left-footed playe
 
 Now we can take a look at the table below that shows some interesting descriptive values about our quantitative variables. More precisely, we have calculated the mean, the standard deviation, the skewness and the kurtosis for each of them. It would be too massive to describe precisely each result of this table since we have a lot of variables, but we will try to outline the most important ones. 
 
-\begin{center}
-```{r descriptive table, out.width="80%"}
+```{r descriptive_table, out.width="80%", eval=T}
 
 desc.quantitative = compute.desc.quantitative(dataset)
 
 formattable(desc.quantitative, align=c("l", rep("c", ncol(desc.quantitative)-1)))
-# kable(desc.quantitative)
 ```
-\end{center}
-
 
 Let's start with the <i>Age</i> variable. Players age have mean <code id="code">25</code>, with a <code id="code">`r 4.7`</code> standard deviation. We see that the variable is right skewed (nothing surprising, some players can still play at 40 but none can play at 5). The kurtosis is slightly less than 3, which means that the variable is maybe a bit light-tailed. 
 
@@ -279,7 +270,6 @@ models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 
 <!--We have now looked at 6 different models : the complete regression model (two kinds), the AIC-stepwise regression model (two kinds) and the LASSO regression model (two kinds). Indeed, for each of them, we have estimated a model of regression against the <i>Wage</i> variable and against the <i>log_wage</i> variable. We have done that because we suspected non linear relations in our model. -->
 
-\begin{center}
 ```{r}
 # Set the final model (lasso)
 choice = 3
@@ -289,10 +279,7 @@ model = model.lassology
 formattable(models.comparison, list(
   formattable::area(row=choice) ~ formatter("span", style= ~ style(font.weight="bold"))
 ))
-
-# kable(models.comparison)
 ```
-\end{center}
 
 The table above shows a model comparison for those `r nrow(models.comparison)` models. We use various criteria such as the log-likelihood, the AIC, the adjusted R-squared and the deviance. <!--We see that the adjusted R-squared is slightly better if we don't take the log of the response variable, but all the other criteria are far much better when we take it. --> We decide to take as final model the `r models.comparison[choice,1]` model with log of the <i>Wage</i> variable because it has almost as good goodness of fit criteria as the Complete model, but it has only `r models.comparison$Vars[choice]` variables. The final model is then given by `r paste0(sapply(seq(1, length(model$coefficients)), function (x) return (paste0(round(coef(model)[x], opt.digits), " ", names(coef(model))[x]))), collapse = " + ")`.
 
@@ -305,7 +292,6 @@ where <i>NationalityAfrica</i>, <i>NationalityAsia</i>, <i>NationalityEurope</i>
 
 We test different possible interactions in the following : we add each time an interaction term in the basis model (final model) and then look at the properties of the new model. The first (1) model with interaction contains an interaction term between the <i>Preferred_FootLeft</i> variable and the <i>Marking</i> variable. We then consider interaction between <i>Preferred_FootLeft</i> and <i>Value</i> (2), interaction between <i>NationalityEurope</i> and <i>Potential</i> (3) and interaction between <i>NationalityAfrica</i> and <i>Value</i> (4).
 
-\begin{center}
 ```{r}
 
 formula.model = paste0("log(Wage) ~ ", paste(names(coef(model))[0:-1], collapse=" + "))
@@ -322,9 +308,7 @@ models.comparison = addComparison(model.interaction2, "Model 2")
 models.comparison = addComparison(model.interaction3, "Model 3")
 models.comparison = addComparison(model.interaction4, "Model 4")
 formattable(models.comparison, align=c("l", "c"))
-# kable(models.comparison)
 ```
-\end{center}
 
 In the comparative table above, we see that the interactions we are testing does not improve a lot our criteria of goodness of fit : it is possible to get an AIC and an adjusted R-square slightly better than in the basis model (that's the case when we consider the interaction between <i>NationalityEurope</i> and <i>Potential</i>) but this difference isn't so much considerable. Adjusted R-squared only reaches <code id="code">`r max(models.comparison$Adjusted.R2)`</code> at best instead of <code id="code">`r models.comparison$Adjusted.R2[1]`</code> in the model without interactions and R-squared remains mainly constant for the different tested models. Therefore we will work with the model without any interaction.
 
@@ -433,7 +417,6 @@ Here, the Cook's distances are very low (very close to 0 for the wide majority).
 
 We will use the Variance Inflation Factors (VIF) to determine if there is multicollinearity problems. Recall that the VIF for $\hat{\beta}_k$ is defined by $$VIF_k = \frac{1}{1-R_k^2} \; \text{for} \; k=1,..., p-1 \; \textrm{where} \; R_k^2$$ is the coefficient of determination of a regression of $X_k$ on $X_1,...,X_{k-1},X_{k+1},...,X_{p-1}$. The decision rule to decide if there is a multicollinearity problem is the following : if either the maximum VIF is higher than <code id="code">10</code> or if the average VIF is considerably larger than <code id="code">1</code> (A $VIF_k$ greater than <code id="code">10</code> means that the corresponding $R^2_k$ is larger than <code id="code">0.9</code>, which is a sign of approximate collinearity). This method, instead of the pairwise correlation matrix that we analyzed before, has the advantage to detect also multicollinearity relations involving more than <code id="code">2</code> variables.
 
-\begin{center}
 ```{r}
 p = ols_vif_tol(model)
 p = within(p, {
@@ -441,9 +424,7 @@ p = within(p, {
   VIF = round(VIF, opt.digits)
 })
 formattable(p, align=c("l", "c", "c"))
-# kable(p)
 ```
-\end{center}
 
 
 Since we have VIF of <code id="code">`r p[2,3]`</code> (for <i>Overall</i>) and <code id="code">`r p[5,3]`</code> (for <i>Value</i>), based on our decision rule, there is a multicollinearity problem. Moreover, the mean of all these VIF is of <code id="code">`r round(mean(p[,3]), 3)`</code>, which is also considerably larger than than one. Nevertheless, we can not apply Ridge Regression since the underlying assumptions are not satisfied. Indeed, as shown before, the linearity criterion isn't that clear. Moreover, we can show that there is heteroskedasticity (see next section). As a result, we have to cope with that multicollinearity problem in the following.
@@ -524,7 +505,8 @@ $$H_0 : \beta_{Overall} \\
 
 ```{r}
 library(car)
-hyp = c(0, 0, −2, 1, 1, 0, 0, 0)
+
+hyp = c(0, 0, -2, 1, 1, 0, 0, 0)
 t = linearHypothesis(model, hypothesis.matrix = hyp)
 t
 ```
@@ -686,7 +668,7 @@ removeBackground = function(p){
 
 # Descriptive analysis : Mean, Sd, Skewness and Kurtosis
 library(moments)
-library(formattable)
+library(print(formattable
 compute.desc.quantitative = function(data){
   
   addStats = function(col, name){
@@ -771,7 +753,7 @@ barplot(prop.table(table(original$Nationality)), main="Nationality of the player
 
 # Print desc
 desc.quantitative = compute.desc.quantitative(dataset)
-formattable(desc.quantitative, align=c("l", rep("c", ncol(desc.quantitative)-1)))
+print(formattable(desc.quantitative, align=c("l", rep("c", ncol(desc.quantitative)-1))))
 
 
 # Boxplot and Histogram
@@ -842,9 +824,9 @@ models.comparison = addComparison(model.lassology, "Lasso log(Y)")
 choice = 3
 model = model.lassology
 
-formattable(models.comparison, list(
+print(formattable(models.comparison, list(
   formattable::area(row=choice) ~ formatter("span", style= ~ style(font.weight="bold"))
-))
+)))
 
 formula.model = paste0("log(Wage) ~ ", paste(names(coef(model))[0:-1], collapse=" + "))
 
@@ -864,7 +846,7 @@ models.comparison = addComparison(model.interaction2, "Model 2")
 models.comparison = addComparison(model.interaction3, "Model 3")
 models.comparison = addComparison(model.interaction4, "Model 4")
 
-formattable(models.comparison, align=c("l", "c"))
+print(formattable(models.comparison, align=c("l", "c")))
 
 # ===
 # Non-linearity relations
@@ -934,7 +916,7 @@ p = within(p, {
   Tolerance = round(Tolerance, opt.digits)
   VIF = round(VIF, opt.digits)
 })
-formattable(p, align=c("l", "c", "c"))
+print(formattable(p, align=c("l", "c", "c")))
 
 # ===
 # Heteroskedasticity : Residuals vs fitted 
